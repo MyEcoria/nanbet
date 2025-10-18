@@ -1,0 +1,29 @@
+{
+  "name": "nanbet",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "Pierric Buchez",
+  "type": "commonjs",
+  "main": "src/app.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "cookie-parser": "^1.4.7",
+    "crypto-js": "^4.2.0",
+    "express": "^5.1.0",
+    "nanocurrency-web": "^1.4.3",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/cookie-parser": "^1.4.9",
+    "@types/express": "^5.0.3",
+    "@types/node": "^24.7.2",
+    "@types/uuid": "^11.0.0",
+    "@types/validator": "^13.15.3",
+    "typescript": "^5.9.3"
+  }
+}
