@@ -123,6 +123,15 @@ export class UserController {
         user: {
           id: req.user.id,
           address: req.user.address,
+          depositAddress: req.user.depositAddress,
+          balances: {
+            XNO: req.user.balanceXNO,
+            BAN: req.user.balanceBAN,
+            XRO: req.user.balanceXRO,
+            ANA: req.user.balanceANA,
+            XDG: req.user.balanceXDG,
+            NANUSD: req.user.balanceNANUSD
+          },
           createdAt: req.user.createdAt
         }
       });

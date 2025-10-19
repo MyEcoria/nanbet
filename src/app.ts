@@ -2,6 +2,7 @@ import express, { Application, Request, Response } from 'express';
 import cookieParser from 'cookie-parser';
 import userRoutes from './routes/user.routes';
 import { sequelize } from './config/database';
+import { websocketService } from './services/websocket.service';
 
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
@@ -26,6 +27,14 @@ const startServer = async () => {
     await sequelize.sync({ alter: true });
     console.log('Database synchronized');
 
+    // Initialize WebSocket connections
+    await websocketService.initialize();
+    console.log('WebSocket connections initialized');
+
+    // Subscribe to all user deposit addresses
+    await websocketService.subscribeToUserDeposits();
+    console.log('User deposit addresses subscribed');
+
     // Start server
     app.listen(PORT, () => {
       console.log(`Server is running on port ${PORT}`);
@@ -37,5 +46,18 @@ const startServer = async () => {
 };
 
 startServer();
+
+// Graceful shutdown
+process.on('SIGINT', () => {
+  console.log('Shutting down gracefully...');
+  websocketService.closeAll();
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  console.log('Shutting down gracefully...');
+  websocketService.closeAll();
+  process.exit(0);
+});
 
 export default app;

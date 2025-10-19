@@ -4,10 +4,17 @@ import { Optional } from 'sequelize';
 export interface UserAttributes {
   id: string;
   address: string;
+  depositAddress: string;
+  balanceXNO: number;
+  balanceBAN: number;
+  balanceXRO: number;
+  balanceANA: number;
+  balanceXDG: number;
+  balanceNANUSD: number;
   createdAt: Date;
 }
 
-export interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt'> {}
+export interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'depositAddress' | 'balanceXNO' | 'balanceBAN' | 'balanceXRO' | 'balanceANA' | 'balanceXDG' | 'balanceNANUSD'> {}
 
 // LoginHistory types
 export interface LoginHistoryAttributes {

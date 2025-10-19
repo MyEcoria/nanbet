@@ -5,6 +5,8 @@ import { User, LoginHistory } from '../config/database';
 import { CallbackRequest } from '../types/auth.types';
 import { SSEService } from './sse.service';
 import { Op } from 'sequelize';
+import { create_account } from '../utils/nanswap_wallet';
+import { websocketService } from './websocket.service';
 
 export class AuthService {
   /**
@@ -137,10 +139,17 @@ export class AuthService {
       let user = await User.findOne({ where: { address: data.account } });
 
       if (!user) {
+        // Create deposit account via nanswap_wallet
+        const depositAddress = await create_account();
+
         user = await User.create({
           address: data.account,
+          depositAddress: depositAddress,
           createdAt: new Date()
         });
+
+        // Subscribe to this deposit address on all WebSocket connections
+        await websocketService.addDepositAddress(depositAddress);
       }
 
       // Generate auth token
