@@ -1,4 +1,4 @@
-import { Optional } from 'sequelize';
+import type { Optional } from 'sequelize';
 
 // User types
 export interface UserAttributes {
@@ -14,7 +14,19 @@ export interface UserAttributes {
   createdAt: Date;
 }
 
-export interface UserCreationAttributes extends Optional<UserAttributes, 'id' | 'createdAt' | 'depositAddress' | 'balanceXNO' | 'balanceBAN' | 'balanceXRO' | 'balanceANA' | 'balanceXDG' | 'balanceNANUSD'> {}
+export interface UserCreationAttributes
+  extends Optional<
+    UserAttributes,
+    | 'id'
+    | 'createdAt'
+    | 'depositAddress'
+    | 'balanceXNO'
+    | 'balanceBAN'
+    | 'balanceXRO'
+    | 'balanceANA'
+    | 'balanceXDG'
+    | 'balanceNANUSD'
+  > {}
 
 // LoginHistory types
 export interface LoginHistoryAttributes {
@@ -30,4 +42,8 @@ export interface LoginHistoryAttributes {
   expiresAt: Date;
 }
 
-export interface LoginHistoryCreationAttributes extends Optional<LoginHistoryAttributes, 'id' | 'createdAt' | 'validityHours' | 'userId' | 'isAuthenticated' | 'authToken'> {}
+export interface LoginHistoryCreationAttributes
+  extends Optional<
+    LoginHistoryAttributes,
+    'id' | 'createdAt' | 'validityHours' | 'userId' | 'isAuthenticated' | 'authToken'
+  > {}

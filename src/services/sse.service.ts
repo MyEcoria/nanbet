@@ -1,145 +1,119 @@
-import { Response } from 'express';
+import type { Response } from 'express';
+import type { SSEClient } from '../types/sse.types';
+import { logger } from '../utils/logger';
 
-interface SSEClient {
-  sessionId: string;
-  response: Response;
-  lastHeartbeat: Date;
+const clients: Map<string, SSEClient> = new Map();
+let heartbeatInterval: NodeJS.Timeout | null = null;
+
+function startHeartbeat(): void {
+  heartbeatInterval = setInterval(() => {
+    const now = new Date();
+
+    clients.forEach((client, sessionId) => {
+      try {
+        client.response.write(': heartbeat\n\n');
+        client.lastHeartbeat = now;
+      } catch (error) {
+        logger.error(`Heartbeat failed for session ${sessionId}`, { error });
+        removeClient(sessionId);
+      }
+    });
+  }, 30000);
 }
 
-export class SSEService {
-  private static clients: Map<string, SSEClient> = new Map();
-  private static heartbeatInterval: NodeJS.Timeout | null = null;
+export function addClient(sessionId: string, res: Response): void {
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Access-Control-Allow-Origin', '*');
 
-  /**
-   * Initialize SSE connection for a session
-   */
-  static addClient(sessionId: string, res: Response): void {
-    // Set SSE headers
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.setHeader('Access-Control-Allow-Origin', '*');
+  clients.set(sessionId, {
+    sessionId,
+    response: res,
+    lastHeartbeat: new Date(),
+  });
 
-    // Store client
-    this.clients.set(sessionId, {
-      sessionId,
-      response: res,
-      lastHeartbeat: new Date()
-    });
+  sendEvent(sessionId, 'connected', {
+    message: 'SSE connection established',
+    sessionId,
+  });
 
-    // Send initial connection event
-    this.sendEvent(sessionId, 'connected', {
-      message: 'SSE connection established',
-      sessionId
-    });
-
-    // Start heartbeat if not already running
-    if (!this.heartbeatInterval) {
-      this.startHeartbeat();
-    }
-
-    // Handle client disconnect
-    res.on('close', () => {
-      this.removeClient(sessionId);
-    });
+  if (!heartbeatInterval) {
+    startHeartbeat();
   }
 
-  /**
-   * Remove client connection
-   */
-  static removeClient(sessionId: string): void {
-    const client = this.clients.get(sessionId);
-    if (client) {
-      client.response.end();
-      this.clients.delete(sessionId);
-    }
+  res.on('close', () => {
+    removeClient(sessionId);
+  });
+}
 
-    // Stop heartbeat if no more clients
-    if (this.clients.size === 0 && this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
+export function removeClient(sessionId: string): void {
+  const client = clients.get(sessionId);
+  if (client) {
+    client.response.end();
+    clients.delete(sessionId);
   }
 
-  /**
-   * Send event to specific session
-   */
-  static sendEvent(sessionId: string, eventType: string, data: any): boolean {
-    const client = this.clients.get(sessionId);
-    if (!client) {
-      return false;
-    }
+  if (clients.size === 0 && heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+}
 
-    try {
-      const payload = `event: ${eventType}\ndata: ${JSON.stringify(data)}\n\n`;
-      client.response.write(payload);
-      return true;
-    } catch (error) {
-      console.error(`Error sending SSE event to ${sessionId}:`, error);
-      this.removeClient(sessionId);
-      return false;
-    }
+export function sendEvent(
+  sessionId: string,
+  eventType: string,
+  data: Record<string, unknown>
+): boolean {
+  const client = clients.get(sessionId);
+  if (!client) {
+    return false;
   }
 
-  /**
-   * Send authenticated event and close connection
-   */
-  static sendAuthenticatedEvent(sessionId: string, account: string, authToken: string): boolean {
-    const success = this.sendEvent(sessionId, 'authenticated', {
-      account,
-      authToken,
-      timestamp: new Date().toISOString()
-    });
+  try {
+    const payload = {
+      type: eventType,
+      ...data,
+    };
+    const message = `data: ${JSON.stringify(payload)}\n\n`;
+    client.response.write(message);
+    return true;
+  } catch (error) {
+    logger.error(`Error sending SSE event to ${sessionId}`, { error });
+    removeClient(sessionId);
+    return false;
+  }
+}
 
-    // Close connection after sending auth event
-    if (success) {
-      setTimeout(() => this.removeClient(sessionId), 1000);
-    }
+export function sendAuthenticatedEvent(
+  sessionId: string,
+  account: string,
+  authToken: string
+): boolean {
+  const success = sendEvent(sessionId, 'authenticated', {
+    account,
+    authToken,
+    timestamp: new Date().toISOString(),
+  });
 
-    return success;
+  if (success) {
+    setTimeout(() => removeClient(sessionId), 1000);
   }
 
-  /**
-   * Send error event
-   */
-  static sendErrorEvent(sessionId: string, error: string): boolean {
-    return this.sendEvent(sessionId, 'error', {
-      error,
-      timestamp: new Date().toISOString()
-    });
-  }
+  return success;
+}
 
-  /**
-   * Start heartbeat to keep connections alive
-   */
-  private static startHeartbeat(): void {
-    this.heartbeatInterval = setInterval(() => {
-      const now = new Date();
+export function sendErrorEvent(sessionId: string, error: string): boolean {
+  return sendEvent(sessionId, 'error', {
+    error,
+    timestamp: new Date().toISOString(),
+  });
+}
 
-      this.clients.forEach((client, sessionId) => {
-        try {
-          // Send heartbeat
-          client.response.write(': heartbeat\n\n');
-          client.lastHeartbeat = now;
-        } catch (error) {
-          console.error(`Heartbeat failed for session ${sessionId}:`, error);
-          this.removeClient(sessionId);
-        }
-      });
-    }, 30000); // Every 30 seconds
-  }
+export function isClientConnected(sessionId: string): boolean {
+  return clients.has(sessionId);
+}
 
-  /**
-   * Check if a client is connected
-   */
-  static isClientConnected(sessionId: string): boolean {
-    return this.clients.has(sessionId);
-  }
-
-  /**
-   * Get number of active connections
-   */
-  static getActiveConnections(): number {
-    return this.clients.size;
-  }
+export function getActiveConnections(): number {
+  return clients.size;
 }

@@ -1,5 +1,5 @@
-import { DataTypes, Model, Sequelize } from 'sequelize';
-import { UserAttributes, UserCreationAttributes } from '../types/models.types';
+import { DataTypes, Model, type Sequelize } from 'sequelize';
+import type { UserAttributes, UserCreationAttributes } from '../types/models.types';
 
 export class User extends Model<UserAttributes, UserCreationAttributes> {
   declare id: string;
@@ -21,66 +21,66 @@ export const initUserModel = (sequelize: Sequelize): typeof User => {
         type: DataTypes.UUID,
         defaultValue: DataTypes.UUIDV4,
         primaryKey: true,
-        allowNull: false
+        allowNull: false,
       },
       address: {
         type: DataTypes.STRING,
         allowNull: false,
         unique: true,
-        comment: 'Crypto wallet address'
+        comment: 'Crypto wallet address',
       },
       depositAddress: {
         type: DataTypes.STRING(64),
         allowNull: false,
         unique: true,
-        comment: 'Deposit crypto address (64 characters)'
+        comment: 'Deposit crypto address (64 characters)',
       },
       balanceXNO: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'XNO balance'
+        comment: 'XNO balance',
       },
       balanceBAN: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'BAN balance'
+        comment: 'BAN balance',
       },
       balanceXRO: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'XRO balance'
+        comment: 'XRO balance',
       },
       balanceANA: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'ANA balance'
+        comment: 'ANA balance',
       },
       balanceXDG: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'XDG balance'
+        comment: 'XDG balance',
       },
       balanceNANUSD: {
         type: DataTypes.DECIMAL(30, 10),
         allowNull: false,
         defaultValue: 0,
-        comment: 'nanUSD balance'
+        comment: 'nanUSD balance',
       },
       createdAt: {
         type: DataTypes.DATE,
         allowNull: false,
-        defaultValue: DataTypes.NOW
-      }
+        defaultValue: DataTypes.NOW,
+      },
     },
     {
       sequelize,
       tableName: 'users',
-      timestamps: false
+      timestamps: false,
     }
   );
 

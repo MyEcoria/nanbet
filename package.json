@@ -7,7 +7,14 @@
   "type": "commonjs",
   "main": "src/app.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "bun run src/app.ts",
+    "start": "NODE_ENV=production bun run src/app.ts",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "biome check --write .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@types/ws": "^8.18.1",
@@ -21,9 +28,12 @@
     "sequelize": "^6.37.7",
     "sqlite3": "^5.1.7",
     "uuid": "^13.0.0",
+    "winston": "^3.18.3",
     "ws": "^8.18.3"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.2.6",
+    "@types/big.js": "^6.2.2",
     "@types/cookie-parser": "^1.4.9",
     "@types/express": "^5.0.3",
     "@types/node": "^24.7.2",

@@ -1,71 +1,98 @@
 import 'dotenv/config';
-import crypto from 'crypto';
+import crypto from 'node:crypto';
+import type {
+  NanswapWalletRequest,
+  NanswapWalletResponse,
+  SignedHeaders,
+} from '../types/wallet.types';
+import { logger } from './logger';
 
-export async function create_account() {
-    const body = {
-        "action": "account_create",
-        "wallet": process.env.NANSWAP_NODES_WALLET_ID!
-    };
-
-    let res = await fetch(process.env.NANSWAP_NODES_WALLET_RPC!, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...getSignedHeaders(body)
-        },
-        body: JSON.stringify(body),
-    });
-
-    const resData = await res.json();
-
-    return resData.account;
+function getEnvVar(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`Missing required environment variable: ${key}`);
+  }
+  return value;
 }
 
-export async function sendFeeless(ticker: string, fromAccount: string, toAccount: string, rawAmount: string): Promise<string | undefined> {
-    console.log({level: 'info', message: `Try to send ${ticker} to ${toAccount}`, raw: rawAmount});
+export async function create_account(): Promise<string> {
+  const body: NanswapWalletRequest = {
+    action: 'account_create',
+    wallet: getEnvVar('NANSWAP_NODES_WALLET_ID'),
+  };
 
-    const body = {
-        "action": "send",
-        "wallet": process.env.NANSWAP_NODES_WALLET_ID!,
-        "source": fromAccount,
-        "destination": toAccount,
-        "amount": rawAmount,
-        "ticker": ticker
-    };
+  const res = await fetch(getEnvVar('NANSWAP_NODES_WALLET_RPC'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getSignedHeaders(body),
+    },
+    body: JSON.stringify(body),
+  });
 
-    console.log({level: 'info', message: `Sending ${ticker}`, body: body});
+  const resData = (await res.json()) as NanswapWalletResponse;
 
-    let res = await fetch(process.env.NANSWAP_NODES_WALLET_RPC!, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            ...getSignedHeaders(body)
-        },
-        body: JSON.stringify(body),
-    });
+  if (!resData.account) {
+    throw new Error('Failed to create account: no account returned');
+  }
 
-    const resData = await res.json();
-    console.log({level: 'info', message: `${ticker} sent`, res: resData});
-
-    return resData.block;
+  return resData.account;
 }
 
-function getSignedHeaders(message) {
-    const messageToSign = {
-        "ticker": "ALL",
-        "params": message,
-        "ts": Date.now().toString()
-    };
+export async function sendFeeless(
+  ticker: string,
+  fromAccount: string,
+  toAccount: string,
+  rawAmount: string
+): Promise<string | undefined> {
+  logger.info(`Sending ${ticker}`, { from: fromAccount, to: toAccount, amount: rawAmount });
 
-    const signature = crypto.createHmac('sha256', process.env.NANSWAP_NODES_WALLET_SECRET_KEY!)
-        .update(JSON.stringify(messageToSign))
-        .digest('hex');
+  const body: NanswapWalletRequest = {
+    action: 'send',
+    wallet: getEnvVar('NANSWAP_NODES_WALLET_ID'),
+    source: fromAccount,
+    destination: toAccount,
+    amount: rawAmount,
+    ticker: ticker,
+  };
 
-    const headers = {
-        'nodes-api-key': process.env.NANSWAP_NODES_WALLET_API_KEY!,
-        'signature': signature,
-        'ts': messageToSign.ts,
-    };
+  const res = await fetch(getEnvVar('NANSWAP_NODES_WALLET_RPC'), {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getSignedHeaders(body),
+    },
+    body: JSON.stringify(body),
+  });
 
-    return headers;
+  const resData = (await res.json()) as NanswapWalletResponse;
+
+  if (resData.block) {
+    logger.info(`${ticker} sent successfully`, { block: resData.block });
+  } else {
+    logger.error(`${ticker} send failed`, { error: resData.error || 'Unknown error' });
+  }
+
+  return resData.block;
+}
+
+function getSignedHeaders(message: NanswapWalletRequest): SignedHeaders {
+  const messageToSign = {
+    ticker: 'ALL',
+    params: message,
+    ts: Date.now().toString(),
+  };
+
+  const signature = crypto
+    .createHmac('sha256', getEnvVar('NANSWAP_NODES_WALLET_SECRET_KEY'))
+    .update(JSON.stringify(messageToSign))
+    .digest('hex');
+
+  const headers: SignedHeaders = {
+    'nodes-api-key': getEnvVar('NANSWAP_NODES_WALLET_API_KEY'),
+    signature: signature,
+    ts: messageToSign.ts,
+  };
+
+  return headers;
 }

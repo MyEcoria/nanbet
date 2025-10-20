@@ -1,11 +1,11 @@
 import { Sequelize } from 'sequelize';
-import { initUserModel, User } from '../models/User.model';
 import { initLoginHistoryModel, LoginHistory } from '../models/LoginHistory.model';
+import { initUserModel, User } from '../models/User.model';
 
 const sequelize = new Sequelize({
   dialect: 'sqlite',
   storage: './database.sqlite',
-  logging: false
+  logging: false,
 });
 
 // Initialize models
@@ -15,12 +15,12 @@ initLoginHistoryModel(sequelize);
 // Define associations
 User.hasMany(LoginHistory, {
   foreignKey: 'userId',
-  as: 'loginHistory'
+  as: 'loginHistory',
 });
 
 LoginHistory.belongsTo(User, {
   foreignKey: 'userId',
-  as: 'user'
+  as: 'user',
 });
 
 export { sequelize, User, LoginHistory };
