@@ -1,6 +1,6 @@
 import type { Optional } from 'sequelize';
 
-// User types
+
 export interface UserAttributes {
   id: string;
   address: string;
@@ -28,7 +28,7 @@ export interface UserCreationAttributes
     | 'balanceNANUSD'
   > {}
 
-// LoginHistory types
+
 export interface LoginHistoryAttributes {
   id: string;
   userId: string | null;
@@ -46,4 +46,43 @@ export interface LoginHistoryCreationAttributes
   extends Optional<
     LoginHistoryAttributes,
     'id' | 'createdAt' | 'validityHours' | 'userId' | 'isAuthenticated' | 'authToken'
+  > {}
+
+
+export interface CrashGameAttributes {
+  id: string;
+  gameNumber: number;
+  serverSeed: string;
+  serverSeedHash: string;
+  crashPoint: number;
+  startedAt: Date;
+  crashedAt: Date | null;
+  status: 'pending' | 'betting' | 'running' | 'crashed';
+  createdAt: Date;
+}
+
+export interface CrashGameCreationAttributes
+  extends Optional<
+    CrashGameAttributes,
+    'id' | 'createdAt' | 'gameNumber' | 'startedAt' | 'crashedAt' | 'status'
+  > {}
+
+
+export interface CrashBetAttributes {
+  id: string;
+  userId: string;
+  gameId: string;
+  currency: string;
+  betAmount: number;
+  cashOutAt: number | null;
+  profit: number;
+  status: 'pending' | 'playing' | 'cashed_out' | 'lost';
+  createdAt: Date;
+  cashOutTime: Date | null;
+}
+
+export interface CrashBetCreationAttributes
+  extends Optional<
+    CrashBetAttributes,
+    'id' | 'createdAt' | 'cashOutAt' | 'profit' | 'status' | 'cashOutTime'
   > {}

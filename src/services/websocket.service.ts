@@ -1,4 +1,5 @@
 import ReconnectingWebSocket from 'reconnecting-websocket';
+import type { Server as SocketIOServer } from 'socket.io';
 import WS from 'ws';
 import { sequelize } from '../config/database';
 import wallets from '../config/wallets';
@@ -13,9 +14,15 @@ import { sendFeeless } from '../utils/nanswap_wallet';
 
 class WebSocketService {
   private connections: Map<string, WebSocketConnection> = new Map();
+  private io: SocketIOServer | null = null;
 
-  public async initialize(): Promise<void> {
+  public async initialize(io?: SocketIOServer): Promise<void> {
     logger.info('Initializing WebSocket connections');
+
+    if (io) {
+      this.io = io;
+      logger.info('Socket.IO server attached to WebSocket service');
+    }
 
     for (const [ticker, config] of Object.entries(wallets)) {
       const wsUrl = config.WS[0];
@@ -93,6 +100,33 @@ class WebSocketService {
           newBalance,
         });
       });
+
+      // Reload user to get all balances
+      await user.reload();
+
+      // Emit Socket.IO events for real-time updates
+      if (this.io) {
+        // Send balance update to user
+        this.io.to(`user:${user.id}`).emit('balance:update', {
+          balanceXNO: parseFloat(String(user.balanceXNO)),
+          balanceBAN: parseFloat(String(user.balanceBAN)),
+          balanceXRO: parseFloat(String(user.balanceXRO)),
+          balanceANA: parseFloat(String(user.balanceANA)),
+          balanceXDG: parseFloat(String(user.balanceXDG)),
+          balanceNANUSD: parseFloat(String(user.balanceNANUSD)),
+        });
+
+        // Send deposit notification to user
+        this.io.to(`user:${user.id}`).emit('notification', {
+          type: 'deposit',
+          message: `Deposit received: ${megaAmount} ${ticker}`,
+          amount: parseFloat(String(megaAmount)),
+          currency: ticker,
+          timestamp: new Date().toISOString(),
+        });
+
+        logger.info(`[${ticker}] Socket.IO notifications sent to user ${user.id}`);
+      }
 
       logger.info(`[${ticker}] Sending funds to hot wallet`, { amount });
       const blockHash = await sendFeeless(ticker, account, walletConfig.mainAccountHot, amount);

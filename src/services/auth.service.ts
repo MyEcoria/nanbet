@@ -18,14 +18,14 @@ export async function initiateSession(ipAddress: string): Promise<{
   const sessionId = uuidv4();
   const timestamp = Date.now();
   const message = `Login-${sessionId}-${timestamp}`;
-  const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
 
   await LoginHistory.create({
     sessionId,
     message,
     userId: null,
     ipAddress,
-    validityHours: 24,
+    validityHours: 7 * 24, 
     isAuthenticated: false,
     authToken: null,
     expiresAt,
@@ -36,7 +36,7 @@ export async function initiateSession(ipAddress: string): Promise<{
     sessionId,
     message,
     expiresAt,
-    expiresIn: 300,
+    expiresIn: 7 * 24 * 60 * 60, 
   };
 }
 
@@ -57,7 +57,7 @@ export function verifySignature(data: CallbackRequest, expectedMessage: string):
     }
 
     const publicKey = tools.addressToPublicKey(data.account);
-    const isValid = tools.verify(publicKey, data.signature, expectedMessage);
+    const isValid = tools.verify(publicKey, data.signature, expectedWithPrefix);
 
     return isValid;
   } catch (error) {
@@ -127,11 +127,13 @@ export async function processCallback(
     }
 
     const authToken = generateAuthToken(user.id, user.address);
+    const tokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
 
     await session.update({
       userId: user.id,
       isAuthenticated: true,
       authToken,
+      expiresAt: tokenExpiresAt,
     });
 
     sendAuthenticatedEvent(session.sessionId, user.address, authToken);

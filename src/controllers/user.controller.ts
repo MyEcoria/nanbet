@@ -53,6 +53,7 @@ export async function events(req: Request, res: Response): Promise<void> {
 export async function callback(req: Request, res: Response): Promise<void> {
   try {
     const data: CallbackRequest = req.body;
+    console.log(data);
 
     if (!data.message || !data.signature || !data.account || !data.signatureType) {
       res.status(400).json({
@@ -103,14 +104,12 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
         id: req.user.id,
         address: req.user.address,
         depositAddress: req.user.depositAddress,
-        balances: {
-          XNO: req.user.balanceXNO,
-          BAN: req.user.balanceBAN,
-          XRO: req.user.balanceXRO,
-          ANA: req.user.balanceANA,
-          XDG: req.user.balanceXDG,
-          NANUSD: req.user.balanceNANUSD,
-        },
+        balanceXNO: req.user.balanceXNO,
+        balanceBAN: req.user.balanceBAN,
+        balanceXRO: req.user.balanceXRO,
+        balanceANA: req.user.balanceANA,
+        balanceXDG: req.user.balanceXDG,
+        balanceNANUSD: req.user.balanceNANUSD,
         createdAt: req.user.createdAt,
       },
     });
