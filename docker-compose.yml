@@ -1,0 +1,74 @@
+version: '3.8'
+
+services:
+  # MariaDB Database
+  mariadb:
+    image: mariadb:11.4
+    container_name: nanbet-mariadb
+    restart: unless-stopped
+    environment:
+      # Root password (only used by MariaDB, not by the application)
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootpassword_change_in_production}
+      MYSQL_DATABASE: ${DB_NAME:-nanbet}
+      MYSQL_USER: ${DB_USER:-nanbet}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-nanbet}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+      - ./docker/mariadb/init:/docker-entrypoint-initdb.d
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    networks:
+      - nanbet-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # NanBet Backend API
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: nanbet-backend
+    restart: unless-stopped
+    depends_on:
+      mariadb:
+        condition: service_healthy
+    environment:
+      # Server
+      NODE_ENV: production
+      PORT: ${PORT:-3000}
+      BASE_URL: ${BASE_URL:-http://localhost:3000}
+
+      # Database
+      DB_DIALECT: mysql
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_NAME: ${DB_NAME:-nanbet}
+      DB_USER: ${DB_USER:-nanbet}
+      DB_PASSWORD: ${DB_PASSWORD:-nanbet}
+
+      # Nano Nodes API
+      NODES_API_KEY: ${NODES_API_KEY}
+    ports:
+      - "${PORT:-3000}:3000"
+    networks:
+      - nanbet-network
+    volumes:
+      - ./logs:/app/logs
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  nanbet-network:
+    driver: bridge
+
+volumes:
+  mariadb_data:
+    driver: local

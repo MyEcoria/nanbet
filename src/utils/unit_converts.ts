@@ -16,8 +16,8 @@ const UNIT_TICKER: Record<UnitTicker, UnitConfig> = {
     mega_in_raw: '.000000000000000000000000000001',
   },
   NANUSD: {
-    raw_in_mega: '1000000000000000000000000000000',
-    mega_in_raw: '.000000000000000000000000000001',
+    raw_in_mega: '1000000',
+    mega_in_raw: '.000001',
   },
   XRO: {
     raw_in_mega: '1000000000000000000000000000000',

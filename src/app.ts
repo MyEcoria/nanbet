@@ -4,6 +4,7 @@ import cors from 'cors';
 import express, { type Application, type Request, type Response } from 'express';
 import { sequelize } from './config/database';
 import userRoutes from './routes/user.routes';
+import withdrawalRoutes from './routes/withdrawal.routes';
 import { websocketService } from './services/websocket.service';
 import { CrashSocketHandler } from './sockets/crash.socket';
 import { logger } from './utils/logger';
@@ -27,6 +28,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use('/user', userRoutes);
+app.use('/withdrawal', withdrawalRoutes);
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });

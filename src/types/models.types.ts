@@ -86,3 +86,30 @@ export interface CrashBetCreationAttributes
     CrashBetAttributes,
     'id' | 'createdAt' | 'cashOutAt' | 'profit' | 'status' | 'cashOutTime'
   > {}
+
+
+export interface WithdrawalAttributes {
+  id: string;
+  userId: string;
+  currency: string;
+  amount: number;
+  destinationAddress: string;
+  status: 'pending' | 'processing' | 'completed' | 'failed' | 'cancelled';
+  transactionHash: string | null;
+  failureReason: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+  processedAt: Date | null;
+}
+
+export interface WithdrawalCreationAttributes
+  extends Optional<
+    WithdrawalAttributes,
+    | 'id'
+    | 'createdAt'
+    | 'updatedAt'
+    | 'status'
+    | 'transactionHash'
+    | 'failureReason'
+    | 'processedAt'
+  > {}

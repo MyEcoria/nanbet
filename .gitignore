@@ -1,6 +1,25 @@
 .claude
 node_modules
 *.sqlite
+*.db
+database.sqlite
 bun.lock
 .env
+.env.local
+.env.*.local
 *.log
+logs/
+
+# Docker volumes
+docker/mariadb/data/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db

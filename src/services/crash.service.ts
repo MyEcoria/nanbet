@@ -298,25 +298,23 @@ export class CrashGameService {
     }
 
     try {
-      
-      const existingBet = await CrashBet.findOne({
-        where: {
-          userId,
-          gameId,
-        },
-      });
-
-      if (existingBet) {
-        return {
-          success: false,
-          error: 'You already have a bet in this game',
-          code: 'BET_ALREADY_PLACED',
-        };
-      }
-
-      
+      // Place bet within a transaction with lock to prevent race conditions
       const result = await sequelize.transaction(async (t) => {
-        
+        // Check if user already has a bet in this game (inside transaction with lock)
+        const existingBet = await CrashBet.findOne({
+          where: {
+            userId,
+            gameId,
+          },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (existingBet) {
+          throw new Error('BET_ALREADY_PLACED');
+        }
+
+        // Get user with lock to prevent race conditions
         const user = await User.findByPk(userId, {
           transaction: t,
           lock: t.LOCK.UPDATE,
@@ -326,7 +324,7 @@ export class CrashGameService {
           throw new Error('User not found');
         }
 
-        
+        // Check balance
         const balanceField = `balance${currency}` as keyof User;
         const currentBalance = parseFloat(String(user[balanceField] ?? 0));
 
@@ -334,11 +332,11 @@ export class CrashGameService {
           throw new Error('Insufficient balance');
         }
 
-        
+        // Deduct bet amount from balance
         const newBalance = currentBalance - amount;
         await user.update({ [balanceField]: newBalance }, { transaction: t });
 
-        
+        // Create bet
         const bet = await CrashBet.create(
           {
             userId,
@@ -402,6 +400,14 @@ export class CrashGameService {
           success: false,
           error: errorMessage,
           code: 'INSUFFICIENT_BALANCE',
+        };
+      }
+
+      if (errorMessage === 'BET_ALREADY_PLACED') {
+        return {
+          success: false,
+          error: 'You already have a bet in this game',
+          code: 'BET_ALREADY_PLACED',
         };
       }
 
