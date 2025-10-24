@@ -29,26 +29,24 @@ export class CrashGameService {
   private gameStartTime: number = 0;
   private config: CrashGameConfig;
 
-  
   private betAttempts: Map<string, number[]> = new Map();
   private cashOutAttempts: Map<string, number[]> = new Map();
 
   constructor(io: SocketIOServer, config?: Partial<CrashGameConfig>) {
     this.io = io;
     this.config = {
-      bettingDuration: 10, 
+      bettingDuration: 10,
       minBet: 0,
       maxBet: 1000,
       maxProfit: 10000,
-      tickRate: 100, 
+      tickRate: 100,
       minCrashPoint: 1.0,
       maxCrashPoint: 1000000,
-      houseEdge: 0.01, 
+      houseEdge: 0.01,
       ...config,
     };
   }
 
-  
   public async start(): Promise<void> {
     logger.info('[Crash] Starting crash game service');
     await this.startNewGame();
@@ -298,9 +296,7 @@ export class CrashGameService {
     }
 
     try {
-      // Place bet within a transaction with lock to prevent race conditions
       const result = await sequelize.transaction(async (t) => {
-        // Check if user already has a bet in this game (inside transaction with lock)
         const existingBet = await CrashBet.findOne({
           where: {
             userId,
@@ -314,7 +310,6 @@ export class CrashGameService {
           throw new Error('BET_ALREADY_PLACED');
         }
 
-        // Get user with lock to prevent race conditions
         const user = await User.findByPk(userId, {
           transaction: t,
           lock: t.LOCK.UPDATE,
@@ -324,7 +319,6 @@ export class CrashGameService {
           throw new Error('User not found');
         }
 
-        // Check balance
         const balanceField = `balance${currency}` as keyof User;
         const currentBalance = parseFloat(String(user[balanceField] ?? 0));
 
@@ -332,11 +326,9 @@ export class CrashGameService {
           throw new Error('Insufficient balance');
         }
 
-        // Deduct bet amount from balance
         const newBalance = currentBalance - amount;
         await user.update({ [balanceField]: newBalance }, { transaction: t });
 
-        // Create bet
         const bet = await CrashBet.create(
           {
             userId,
@@ -377,7 +369,6 @@ export class CrashGameService {
         balanceNANUSD: parseFloat(String(result.user.balanceNANUSD)),
       });
 
-      // Send bet notification
       this.io.to(`user:${userId}`).emit('notification', {
         type: 'bet',
         message: `Bet placed: ${amount} ${currency}`,
@@ -538,7 +529,6 @@ export class CrashGameService {
         balanceNANUSD: parseFloat(String(result.user.balanceNANUSD)),
       });
 
-      // Send cashout notification
       const payout = parseFloat(String(result.bet.betAmount)) + result.profit;
       this.io.to(`user:${userId}`).emit('notification', {
         type: 'cashout',
@@ -608,7 +598,6 @@ export class CrashGameService {
       bettingTimeLeft = Math.max(0, bettingEndTime - Date.now());
     }
 
-    // Find user's bet if userId is provided
     let userBet: { betId: string; amount: number; currency: string } | undefined;
     if (userId) {
       const bet = bets.find((b) => b.userId === userId && (b.status === 'pending' || b.status === 'playing'));

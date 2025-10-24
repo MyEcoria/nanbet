@@ -63,8 +63,7 @@ export async function callback(req: Request, res: Response): Promise<void> {
       return;
     }
 
-    const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
-    const result = await processCallback(data, ipAddress);
+    const result = await processCallback(data);
 
     if (result.success) {
       res.json({

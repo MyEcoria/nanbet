@@ -101,12 +101,9 @@ class WebSocketService {
         });
       });
 
-      // Reload user to get all balances
       await user.reload();
 
-      // Emit Socket.IO events for real-time updates
       if (this.io) {
-        // Send balance update to user
         this.io.to(`user:${user.id}`).emit('balance:update', {
           balanceXNO: parseFloat(String(user.balanceXNO)),
           balanceBAN: parseFloat(String(user.balanceBAN)),
@@ -116,7 +113,6 @@ class WebSocketService {
           balanceNANUSD: parseFloat(String(user.balanceNANUSD)),
         });
 
-        // Send deposit notification to user
         this.io.to(`user:${user.id}`).emit('notification', {
           type: 'deposit',
           message: `Deposit received: ${megaAmount} ${ticker}`,

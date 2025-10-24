@@ -6,7 +6,6 @@ import { initUserModel, User } from '../models/User.model';
 import { initWithdrawalModel, Withdrawal } from '../models/Withdrawal.model';
 import { logger } from '../utils/logger';
 
-// Database configuration from environment variables
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = parseInt(process.env.DB_PORT || '3306', 10);
 const DB_NAME = process.env.DB_NAME || 'nanbet';
@@ -14,7 +13,7 @@ const DB_USER = process.env.DB_USER || 'nanbet';
 const DB_PASSWORD = process.env.DB_PASSWORD || 'nanbet';
 
 const sequelize = new Sequelize({
-  dialect: 'mysql', // Use mysql dialect with mysql2 driver (works with MariaDB)
+  dialect: 'mysql',
   host: DB_HOST,
   port: DB_PORT,
   database: DB_NAME,
@@ -72,7 +71,6 @@ CrashBet.belongsTo(User, {
   as: 'user',
 });
 
-// Withdrawal - User relationship
 User.hasMany(Withdrawal, {
   foreignKey: 'userId',
   as: 'withdrawals',

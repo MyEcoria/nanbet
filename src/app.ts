@@ -12,12 +12,10 @@ import { logger } from './utils/logger';
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
-
 const httpServer = createServer(app);
 
-
 app.use(cors({
-  origin: '*',
+  origin: process.env.ORIGIN || '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -41,7 +39,6 @@ const startServer = async () => {
   try {
     await sequelize.sync({ alter: true });
     logger.info('Database synchronized');
-
 
     crashSocketHandler = new CrashSocketHandler(httpServer);
     await crashSocketHandler.start();

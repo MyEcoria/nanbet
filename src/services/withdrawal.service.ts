@@ -51,7 +51,6 @@ export class WithdrawalService {
     const { userId, currency, amount, destinationAddress } = request;
 
     try {
-      // Validate currency
       if (!wallets[currency]) {
         return {
           success: false,
@@ -60,7 +59,6 @@ export class WithdrawalService {
         };
       }
 
-      // Validate amount
       if (amount <= 0) {
         return {
           success: false,
@@ -69,7 +67,6 @@ export class WithdrawalService {
         };
       }
 
-      // Check minimum withdrawal amount
       const minAmount = MINIMUM_WITHDRAWAL_AMOUNTS[currency] || 0;
       if (amount < minAmount) {
         return {
@@ -79,7 +76,6 @@ export class WithdrawalService {
         };
       }
 
-      // Validate destination address
       if (!this.validateAddress(destinationAddress, currency)) {
         return {
           success: false,
@@ -88,13 +84,11 @@ export class WithdrawalService {
         };
       }
 
-      // Use a transaction with pessimistic locking to prevent race conditions
       const result = await sequelize.transaction(
         {
           isolationLevel: Transaction.ISOLATION_LEVELS.READ_COMMITTED,
         },
         async (t) => {
-          // Lock the user row to prevent concurrent withdrawals (SELECT FOR UPDATE)
           const user = await User.findByPk(userId, {
             lock: t.LOCK.UPDATE,
             transaction: t,
@@ -104,7 +98,6 @@ export class WithdrawalService {
             throw new Error('USER_NOT_FOUND');
           }
 
-          // Check if user has any pending or processing withdrawals
           const pendingWithdrawals = await Withdrawal.count({
             where: {
               userId,
@@ -117,20 +110,16 @@ export class WithdrawalService {
             throw new Error('PENDING_WITHDRAWAL_EXISTS');
           }
 
-          // Get the balance field for the currency
           const balanceField = `balance${currency}` as keyof User;
           const currentBalance = parseFloat(String(user[balanceField] ?? 0));
 
-          // Verify sufficient balance
           if (currentBalance < amount) {
             throw new Error('INSUFFICIENT_BALANCE');
           }
 
-          // Deduct the balance atomically in the same transaction
           const newBalance = currentBalance - amount;
           await user.update({ [balanceField]: newBalance }, { transaction: t });
 
-          // Create the withdrawal record
           const withdrawal = await Withdrawal.create(
             {
               userId,
@@ -155,7 +144,6 @@ export class WithdrawalService {
         }
       );
 
-      // Process the withdrawal asynchronously (outside the transaction to avoid blocking)
       this.processWithdrawal(result.withdrawal.id).catch((error) => {
         logger.error('Error processing withdrawal asynchronously', { error });
       });
@@ -168,7 +156,6 @@ export class WithdrawalService {
     } catch (error) {
       logger.error('Error creating withdrawal', { error, request });
 
-      // Map known errors to user-friendly messages
       if (error instanceof Error) {
         switch (error.message) {
           case 'USER_NOT_FOUND':
@@ -201,7 +188,6 @@ export class WithdrawalService {
    */
   private async processWithdrawal(withdrawalId: string): Promise<void> {
     try {
-      // Update status to processing
       const withdrawal = await Withdrawal.findByPk(withdrawalId);
 
       if (!withdrawal) {
@@ -224,10 +210,8 @@ export class WithdrawalService {
         throw new Error(`Unknown wallet configuration for ${withdrawal.currency}`);
       }
 
-      // Convert amount to raw format
       const rawAmount = walletConfig.converter.megaToRaw(withdrawal.amount.toString());
 
-      // Send the transaction from hot wallet to destination address
       const transactionHash = await sendFeeless(
         withdrawal.currency,
         walletConfig.mainAccountHot,
@@ -236,7 +220,6 @@ export class WithdrawalService {
       );
 
       if (transactionHash) {
-        // Transaction successful
         await withdrawal.update({
           status: 'completed',
           transactionHash,
@@ -250,13 +233,11 @@ export class WithdrawalService {
           amount: withdrawal.amount,
         });
       } else {
-        // Transaction failed
         throw new Error('Failed to send transaction');
       }
     } catch (error) {
       logger.error('Error processing withdrawal', { error, withdrawalId });
 
-      // Update withdrawal status to failed and refund the balance
       await this.refundWithdrawal(withdrawalId, error instanceof Error ? error.message : 'Unknown error');
     }
   }
@@ -276,13 +257,11 @@ export class WithdrawalService {
           throw new Error('Withdrawal not found');
         }
 
-        // Only refund if not already completed
         if (withdrawal.status === 'completed') {
           logger.warn('Cannot refund completed withdrawal', { withdrawalId });
           return;
         }
 
-        // Mark withdrawal as failed
         await withdrawal.update(
           {
             status: 'failed',
@@ -292,7 +271,6 @@ export class WithdrawalService {
           { transaction: t }
         );
 
-        // Refund the user's balance
         const user = await User.findByPk(withdrawal.userId, {
           lock: t.LOCK.UPDATE,
           transaction: t,

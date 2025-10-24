@@ -1,9 +1,6 @@
 import crypto from 'node:crypto';
 
-
-
 export class ProvablyFairGenerator {
-  
   public static generateServerSeed(): string {
     return crypto.randomBytes(32).toString('hex');
   }
