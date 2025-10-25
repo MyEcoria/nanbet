@@ -8,7 +8,7 @@
   "main": "src/app.ts",
   "scripts": {
     "dev": "bun run src/app.ts",
-    "start": "NODE_ENV=production bun run src/app.ts",
+    "start": "bun run src/app.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
@@ -37,6 +37,7 @@
     "reconnecting-websocket": "^4.4.0",
     "sequelize": "^6.37.7",
     "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "sqlite3": "^5.1.7",
     "uuid": "^13.0.0",
     "winston": "^3.18.3",
