@@ -41,7 +41,7 @@ export class CrashGameService {
       maxProfit: 10000,
       tickRate: 100,
       minCrashPoint: 1.0,
-      maxCrashPoint: 1000000,
+      maxCrashPoint: 10,
       houseEdge: 0.01,
       ...config,
     };
