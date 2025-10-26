@@ -5,6 +5,15 @@ import { logger } from '../utils/logger';
 const clients: Map<string, SSEClient> = new Map();
 let heartbeatInterval: NodeJS.Timeout | null = null;
 
+// Stockage des authentifications récentes (sessionId -> {account, authToken, timestamp})
+interface RecentAuth {
+  account: string;
+  authToken: string;
+  timestamp: number;
+}
+const recentAuthentications: Map<string, RecentAuth> = new Map();
+const AUTH_CACHE_DURATION = 100000; // 10 secondes
+
 function startHeartbeat(): void {
   heartbeatInterval = setInterval(() => {
     const now = new Date();
@@ -33,10 +42,25 @@ export function addClient(sessionId: string, res: Response): void {
     lastHeartbeat: new Date(),
   });
 
-  sendEvent(sessionId, 'connected', {
-    message: 'SSE connection established',
-    sessionId,
-  });
+  // Vérifier s'il y a une authentification récente pour cette session
+  const recentAuth = recentAuthentications.get(sessionId);
+  const now = Date.now();
+
+  if (recentAuth && (now - recentAuth.timestamp) <= AUTH_CACHE_DURATION) {
+    // Envoyer immédiatement l'événement d'authentification
+    logger.info(`Sending cached auth for session ${sessionId}`);
+    sendEvent(sessionId, 'authenticated', {
+      account: recentAuth.account,
+      authToken: recentAuth.authToken,
+      timestamp: new Date(recentAuth.timestamp).toISOString(),
+    });
+  } else {
+    // Envoyer l'événement de connexion normal
+    sendEvent(sessionId, 'connected', {
+      message: 'SSE connection established',
+      sessionId,
+    });
+  }
 
   if (!heartbeatInterval) {
     startHeartbeat();
@@ -90,6 +114,21 @@ export function sendAuthenticatedEvent(
   account: string,
   authToken: string
 ): boolean {
+  // Stocker l'authentification dans le cache
+  recentAuthentications.set(sessionId, {
+    account,
+    authToken,
+    timestamp: Date.now(),
+  });
+
+  // Nettoyer le cache après la durée d'expiration
+  setTimeout(() => {
+    const cached = recentAuthentications.get(sessionId);
+    if (cached && (Date.now() - cached.timestamp) >= AUTH_CACHE_DURATION) {
+      recentAuthentications.delete(sessionId);
+    }
+  }, AUTH_CACHE_DURATION);
+
   const success = sendEvent(sessionId, 'authenticated', {
     account,
     authToken,
