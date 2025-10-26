@@ -3,6 +3,7 @@ import {
   activateMaintenance,
   cancelScheduledMaintenance,
   deactivateMaintenance,
+  getFailedWithdrawals,
   getMaintenanceStatus,
   scheduleMaintenance,
 } from '../controllers/admin.controller';
@@ -19,5 +20,8 @@ router.post('/maintenance/activate', activateMaintenance);
 router.post('/maintenance/deactivate', deactivateMaintenance);
 router.post('/maintenance/schedule', scheduleMaintenance);
 router.post('/maintenance/cancel', cancelScheduledMaintenance);
+
+// Withdrawal management routes
+router.get('/withdrawals/failed', getFailedWithdrawals);
 
 export default router;

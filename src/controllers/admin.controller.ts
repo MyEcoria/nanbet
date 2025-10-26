@@ -3,6 +3,7 @@ import type { ActivateMaintenanceRequest, ScheduleMaintenanceRequest } from '../
 import { maintenanceService } from '../services/maintenance.service';
 import { logger } from '../utils/logger';
 import * as sseService from '../services/sse.service';
+import { Withdrawal } from '../models/Withdrawal.model';
 
 export async function getMaintenanceStatus(req: Request, res: Response): Promise<void> {
   try {
@@ -181,4 +182,41 @@ function broadcastMaintenanceStatus(status: any): void {
     timestamp: new Date().toISOString(),
   });
   logger.info('[AdminController] Broadcasted maintenance status update');
+}
+
+export async function getFailedWithdrawals(req: Request, res: Response): Promise<void> {
+  try {
+    const { limit = 100, offset = 0 } = req.query;
+
+    const { count, rows: withdrawals } = await Withdrawal.findAndCountAll({
+      where: {
+        status: 'failed',
+      },
+      order: [['createdAt', 'DESC']],
+      limit: Number(limit),
+      offset: Number(offset),
+    });
+
+    res.json({
+      success: true,
+      data: {
+        withdrawals,
+        total: count,
+        limit: Number(limit),
+        offset: Number(offset),
+      },
+    });
+
+    logger.info('[AdminController] Retrieved failed withdrawals', {
+      count,
+      ip: req.ip,
+    });
+  } catch (error) {
+    logger.error('[AdminController] Error getting failed withdrawals', { error });
+    res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: 'Error getting failed withdrawals',
+    });
+  }
 }
