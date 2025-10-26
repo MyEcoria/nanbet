@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express';
 import type { AuthRequest } from '../middlewares/auth.middleware';
 import { initiateSession, processCallback, validateSession } from '../services/auth.service';
+import { maintenanceService } from '../services/maintenance.service';
 import { addClient } from '../services/sse.service';
 import type { CallbackRequest } from '../types/auth.types';
 import { logger } from '../utils/logger';
@@ -114,6 +115,23 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
     });
   } catch (error) {
     logger.error('Error getting user info', { error });
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+}
+
+export async function getMaintenanceStatus(req: Request, res: Response): Promise<void> {
+  try {
+    const status = await maintenanceService.getStatus();
+
+    res.json({
+      success: true,
+      maintenance: status,
+    });
+  } catch (error) {
+    logger.error('Error getting maintenance status', { error });
     res.status(500).json({
       success: false,
       message: 'Internal server error',

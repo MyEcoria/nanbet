@@ -156,3 +156,22 @@ export function isClientConnected(sessionId: string): boolean {
 export function getActiveConnections(): number {
   return clients.size;
 }
+
+export function broadcastToAll(eventType: string, data: Record<string, unknown>): void {
+  const payload = {
+    type: eventType,
+    ...data,
+  };
+  const message = `data: ${JSON.stringify(payload)}\n\n`;
+
+  clients.forEach((client, sessionId) => {
+    try {
+      client.response.write(message);
+    } catch (error) {
+      logger.error(`Error broadcasting to session ${sessionId}`, { error });
+      removeClient(sessionId);
+    }
+  });
+
+  logger.info(`Broadcasted ${eventType} to ${clients.size} clients`);
+}

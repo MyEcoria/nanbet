@@ -2,6 +2,7 @@ import type { Server as HTTPServer } from 'node:http';
 import { Server as SocketIOServer } from 'socket.io';
 import { LoginHistory } from '../models/LoginHistory.model';
 import { CrashGameService } from '../services/crash.service';
+import { maintenanceService } from '../services/maintenance.service';
 import type {
   ClientToServerEvents,
   InterServerEvents,
@@ -121,6 +122,18 @@ export class CrashSocketHandler {
 
       socket.on('bet:place', async (data, callback) => {
         try {
+          // Check if maintenance is active
+          const isMaintenanceActive = await maintenanceService.isMaintenanceActive();
+          if (isMaintenanceActive) {
+            const status = await maintenanceService.getStatus();
+            callback({
+              success: false,
+              error: status.message || 'Casino is under maintenance',
+              code: 'MAINTENANCE_MODE',
+            });
+            return;
+          }
+
           logger.info('[CrashSocket] Bet placement request', {
             userId,
             amount: data.amount,
@@ -284,5 +297,9 @@ export class CrashSocketHandler {
 
   public getIO(): SocketIOServer {
     return this.io;
+  }
+
+  public getCrashService(): CrashGameService {
+    return this.crashService;
   }
 }

@@ -2,6 +2,7 @@ import { Sequelize } from 'sequelize';
 import { CrashBet, initCrashBetModel } from '../models/CrashBet.model';
 import { CrashGame, initCrashGameModel } from '../models/CrashGame.model';
 import { initLoginHistoryModel, LoginHistory } from '../models/LoginHistory.model';
+import { initMaintenanceModel, Maintenance } from '../models/Maintenance.model';
 import { initUserModel, User } from '../models/User.model';
 import { initWithdrawalModel, Withdrawal } from '../models/Withdrawal.model';
 import { logger } from '../utils/logger';
@@ -38,6 +39,7 @@ initLoginHistoryModel(sequelize);
 initCrashGameModel(sequelize);
 initCrashBetModel(sequelize);
 initWithdrawalModel(sequelize);
+initMaintenanceModel(sequelize);
 
 
 User.hasMany(LoginHistory, {
@@ -81,4 +83,4 @@ Withdrawal.belongsTo(User, {
   as: 'user',
 });
 
-export { sequelize, User, LoginHistory, CrashGame, CrashBet, Withdrawal };
+export { sequelize, User, LoginHistory, CrashGame, CrashBet, Withdrawal, Maintenance };

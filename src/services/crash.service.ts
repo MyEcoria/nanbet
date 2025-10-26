@@ -28,6 +28,8 @@ export class CrashGameService {
   private tickTimer: NodeJS.Timeout | null = null;
   private gameStartTime: number = 0;
   private config: CrashGameConfig;
+  private isFinalRound: boolean = false;
+  private maintenancePending: boolean = false;
 
   private betAttempts: Map<string, number[]> = new Map();
   private cashOutAttempts: Map<string, number[]> = new Map();
@@ -52,11 +54,62 @@ export class CrashGameService {
     await this.startNewGame();
   }
 
-  
+
   public stop(): void {
     logger.info('[Crash] Stopping crash game service');
     if (this.gameTimer) clearTimeout(this.gameTimer);
     if (this.tickTimer) clearInterval(this.tickTimer);
+  }
+
+  /**
+   * Prepare the crash game for maintenance
+   * If a game is in betting or running phase, it will be the final round
+   * No new games will start after the current one ends
+   */
+  public prepareForMaintenance(): void {
+    this.maintenancePending = true;
+
+    if (!this.currentGame) {
+      logger.info('[Crash] No active game, maintenance can proceed immediately');
+      return;
+    }
+
+    const status = this.currentGame.status;
+
+    if (status === 'betting' || status === 'running') {
+      this.isFinalRound = true;
+      logger.info('[Crash] Current game marked as final round before maintenance', {
+        gameId: this.currentGame.id,
+        gameNumber: this.currentGame.gameNumber,
+        status,
+      });
+
+      // Broadcast to all users that this is the final round
+      this.io.emit('game:final_round', {
+        gameId: this.currentGame.id,
+        gameNumber: this.currentGame.gameNumber,
+        message: 'This is the last round before maintenance',
+        status,
+      });
+    } else {
+      logger.info('[Crash] Game already crashed, no new game will start');
+    }
+  }
+
+  /**
+   * Resume normal operations after maintenance
+   */
+  public resumeAfterMaintenance(): void {
+    this.maintenancePending = false;
+    this.isFinalRound = false;
+    logger.info('[Crash] Resuming normal operations after maintenance');
+
+    // Start a new game if no game is active
+    if (!this.currentGame || this.currentGame.status === 'crashed') {
+      this.startNewGame().catch((error) => {
+        logger.error('[Crash] Error starting game after maintenance', { error });
+      });
+    }
   }
 
   
@@ -239,12 +292,22 @@ export class CrashGameService {
       };
       this.io.emit('game:crashed', crashedData);
 
-      
-      this.gameTimer = setTimeout(() => {
-        this.startNewGame().catch((error) => {
-          logger.error('[Crash] Error starting new game after crash', { error });
+      // Check if this was the final round before maintenance
+      if (this.isFinalRound || this.maintenancePending) {
+        logger.info('[Crash] Final round completed, entering maintenance mode');
+        this.io.emit('game:maintenance', {
+          message: 'Casino is now in maintenance mode. No new games will start.',
         });
-      }, 3000);
+        this.isFinalRound = false;
+        // Don't start a new game
+      } else {
+        // Normal flow: start a new game after 3 seconds
+        this.gameTimer = setTimeout(() => {
+          this.startNewGame().catch((error) => {
+            logger.error('[Crash] Error starting new game after crash', { error });
+          });
+        }, 3000);
+      }
     } catch (error) {
       logger.error('[Crash] Error in crashGame', { error });
       
@@ -252,13 +315,13 @@ export class CrashGameService {
     }
   }
 
-  
+
   public async placeBet(
     userId: string,
     amount: number,
     currency: string
   ): Promise<{ success: boolean; betId?: string; error?: string; code?: string }> {
-    
+
     if (!this.checkRateLimit(userId, 'bet')) {
       return {
         success: false,
@@ -267,12 +330,22 @@ export class CrashGameService {
       };
     }
 
-    
+
     if (!this.currentGame || this.currentGame.status !== 'betting') {
       return {
         success: false,
         error: 'Betting is not available right now',
         code: 'BETTING_CLOSED',
+      };
+    }
+
+    // Block new bets if this is the final round and betting phase has been extended
+    // Users who already placed bets can still play, but no new players can join
+    if (this.isFinalRound && this.maintenancePending) {
+      return {
+        success: false,
+        error: 'This is the final round before maintenance',
+        code: 'FINAL_ROUND',
       };
     }
 

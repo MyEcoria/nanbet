@@ -3,8 +3,10 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Application, type Request, type Response } from 'express';
 import { sequelize } from './config/database';
+import adminRoutes from './routes/admin.routes';
 import userRoutes from './routes/user.routes';
 import withdrawalRoutes from './routes/withdrawal.routes';
+import { maintenanceService } from './services/maintenance.service';
 import { websocketService } from './services/websocket.service';
 import { CrashSocketHandler } from './sockets/crash.socket';
 import { logger } from './utils/logger';
@@ -18,7 +20,7 @@ app.use(cors({
   origin: process.env.ORIGIN || '*',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'],
 }));
 
 app.use(express.json());
@@ -27,6 +29,7 @@ app.use(cookieParser());
 
 app.use('/user', userRoutes);
 app.use('/withdrawal', withdrawalRoutes);
+app.use('/admin', adminRoutes);
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -43,6 +46,11 @@ const startServer = async () => {
     crashSocketHandler = new CrashSocketHandler(httpServer);
     await crashSocketHandler.start();
     logger.info('Crash game service started');
+
+    // Initialize maintenance service with crash service reference
+    await maintenanceService.initialize();
+    maintenanceService.setCrashService(crashSocketHandler.getCrashService());
+    logger.info('Maintenance service initialized with crash service');
 
     await websocketService.initialize(crashSocketHandler.getIO());
     logger.info('WebSocket connections initialized');
