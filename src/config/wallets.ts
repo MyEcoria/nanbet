@@ -15,6 +15,7 @@ const main: WalletsConfig = {
     prefix: 'nano',
     logo: 'https://nanswap.com/logo/XNO.svg',
     explorer: 'https://nanolooker.com/block/',
+    maxBet: 130,
   },
   XRO: {
     mainAccountHot: 'xro_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
@@ -26,6 +27,7 @@ const main: WalletsConfig = {
     prefix: 'xro',
     logo: 'https://nanswap.com/logo/XNO.svg',
     explorer: 'https://nanolooker.com/block/',
+    maxBet: 867398,
   },
   BAN: {
     mainAccountHot: 'ban_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
@@ -37,6 +39,7 @@ const main: WalletsConfig = {
     prefix: 'ban',
     logo: 'https://nanswap.com/logo/BAN.svg',
     explorer: 'https://bananolooker.com/block/',
+    maxBet: 90000,
   },
   XDG: {
     mainAccountHot: 'xdg_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
@@ -48,6 +51,7 @@ const main: WalletsConfig = {
     prefix: 'xdg',
     logo: 'https://nanswap.com/logo/XDG.png',
     explorer: 'https://explorer.dogenano.io/block/',
+    maxBet: 28352,
   },
   ANA: {
     mainAccountHot: 'ana_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
@@ -59,6 +63,7 @@ const main: WalletsConfig = {
     prefix: 'ana',
     logo: 'https://nanswap.com/logo/ANA.png',
     explorer: 'https://ananault.lightcord.org/transaction/',
+    maxBet: 53862940,
   },
   NANUSD: {
     mainAccountHot: 'usd_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
@@ -70,6 +75,7 @@ const main: WalletsConfig = {
     prefix: 'usd',
     logo: 'https://nanswap.com/logo/NANUSD.svg',
     explorer: 'https://nanolooker.com/block/',
+    maxBet: 100,
   },
 };
 

@@ -38,9 +38,6 @@ export class CrashGameService {
     this.io = io;
     this.config = {
       bettingDuration: 10,
-      minBet: 0,
-      maxBet: 1000,
-      maxProfit: 10000,
       tickRate: 100,
       minCrashPoint: 1.0,
       maxCrashPoint: 10,
@@ -352,7 +349,8 @@ export class CrashGameService {
     
     const gameId = this.currentGame.id;
 
-    if (!wallets[currency as keyof typeof wallets]) {
+    const wallet = wallets[currency as keyof typeof wallets];
+    if (!wallet) {
       return {
         success: false,
         error: 'Invalid currency',
@@ -360,10 +358,10 @@ export class CrashGameService {
       };
     }
 
-    if (amount > this.config.maxBet) {
+    if (amount > wallet.maxBet) {
       return {
         success: false,
-        error: `Maximum bet is ${this.config.maxBet}`,
+        error: `Maximum bet is ${wallet.maxBet}`,
         code: 'BET_TOO_HIGH',
       };
     }
@@ -534,11 +532,16 @@ export class CrashGameService {
           throw new Error('No active bet found');
         }
 
-        
+
         const profit = parseFloat(String(bet.betAmount)) * (currentMultiplier - 1);
 
-        
-        if (profit > this.config.maxProfit) {
+
+        const wallet = wallets[bet.currency as keyof typeof wallets];
+        if (!wallet) {
+          throw new Error('Invalid currency');
+        }
+        const maxProfit = wallet.maxBet * (this.config.maxCrashPoint - 1);
+        if (profit > maxProfit) {
           throw new Error('Profit exceeds maximum allowed');
         }
 

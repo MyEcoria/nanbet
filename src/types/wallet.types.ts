@@ -10,6 +10,7 @@ export interface WalletConfig {
   prefix: string;
   logo: string;
   explorer: string;
+  maxBet: number;
 }
 
 export type WalletsConfig = Record<string, WalletConfig>;

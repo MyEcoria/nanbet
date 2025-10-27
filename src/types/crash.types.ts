@@ -157,9 +157,6 @@ export interface ActiveBet {
 
 export interface CrashGameConfig {
   bettingDuration: number;
-  minBet: number;
-  maxBet: number;
-  maxProfit: number;
   tickRate: number;
   minCrashPoint: number;
   maxCrashPoint: number;
