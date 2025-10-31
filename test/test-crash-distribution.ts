@@ -78,7 +78,9 @@ function printStats(stats: Stats): void {
   for (const [range, count] of ranges) {
     const percentage = formatPercentage(count, stats.total);
     const bar = '█'.repeat(Math.floor((count / stats.total) * 50));
-    console.log(`${range.padEnd(25)} | ${count.toString().padStart(7)} (${percentage.padStart(7)}) ${bar}`);
+    console.log(
+      `${range.padEnd(25)} | ${count.toString().padStart(7)} (${percentage.padStart(7)}) ${bar}`
+    );
   }
 
   console.log('\n=== HOUSE EDGE VERIFICATION ===\n');
@@ -86,7 +88,7 @@ function printStats(stats: Stats): void {
   // Calculate expected house edge
   // House edge = 1 - (average payout / 1)
   const expectedReturn = stats.average;
-  const houseEdge = ((1 - (1 / expectedReturn)) * 100);
+  const houseEdge = (1 - 1 / expectedReturn) * 100;
   console.log(`Expected return: ${expectedReturn.toFixed(4)}x`);
   console.log(`Calculated house edge: ${houseEdge.toFixed(2)}%`);
   console.log(`Configured house edge: 1.00%`);
@@ -96,8 +98,12 @@ function printStats(stats: Stats): void {
   const above5x = stats.distribution['5.0x-7.0x'] + stats.distribution['7.0x-10.0x'];
   const above7x = stats.distribution['7.0x-10.0x'];
 
-  console.log(`Crash points above 5.0x: ${above5x.toLocaleString()} (${formatPercentage(above5x, stats.total)})`);
-  console.log(`Crash points above 7.0x: ${above7x.toLocaleString()} (${formatPercentage(above7x, stats.total)})`);
+  console.log(
+    `Crash points above 5.0x: ${above5x.toLocaleString()} (${formatPercentage(above5x, stats.total)})`
+  );
+  console.log(
+    `Crash points above 7.0x: ${above7x.toLocaleString()} (${formatPercentage(above7x, stats.total)})`
+  );
 
   console.log('\n========================================================\n');
 }

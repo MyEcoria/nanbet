@@ -238,7 +238,10 @@ export class WithdrawalService {
     } catch (error) {
       logger.error('Error processing withdrawal', { error, withdrawalId });
 
-      await this.refundWithdrawal(withdrawalId, error instanceof Error ? error.message : 'Unknown error');
+      await this.refundWithdrawal(
+        withdrawalId,
+        error instanceof Error ? error.message : 'Unknown error'
+      );
     }
   }
 
@@ -336,7 +339,6 @@ export class WithdrawalService {
       return null;
     }
   }
-
 }
 
 export const withdrawalService = new WithdrawalService();

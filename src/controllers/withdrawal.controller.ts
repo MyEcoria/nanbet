@@ -35,12 +35,12 @@ export async function createWithdrawal(req: AuthRequest, res: Response): Promise
         success: true,
         message: result.message,
         withdrawal: {
-          id: result.withdrawal!.id,
-          currency: result.withdrawal!.currency,
-          amount: result.withdrawal!.amount,
-          destinationAddress: result.withdrawal!.destinationAddress,
-          status: result.withdrawal!.status,
-          createdAt: result.withdrawal!.createdAt,
+          id: result.withdrawal?.id,
+          currency: result.withdrawal?.currency,
+          amount: result.withdrawal?.amount,
+          destinationAddress: result.withdrawal?.destinationAddress,
+          status: result.withdrawal?.status,
+          createdAt: result.withdrawal?.createdAt,
         },
       });
     } else {
@@ -148,4 +148,3 @@ export async function getWithdrawal(req: AuthRequest, res: Response): Promise<vo
     });
   }
 }
-

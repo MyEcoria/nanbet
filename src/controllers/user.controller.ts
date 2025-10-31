@@ -54,7 +54,6 @@ export async function events(req: Request, res: Response): Promise<void> {
 export async function callback(req: Request, res: Response): Promise<void> {
   try {
     const data: CallbackRequest = req.body;
-    console.log(data);
 
     if (!data.message || !data.signature || !data.account || !data.signatureType) {
       res.status(400).json({
@@ -80,7 +79,10 @@ export async function callback(req: Request, res: Response): Promise<void> {
       });
     }
   } catch (error) {
-    logger.error('Error processing callback', { error });
+    logger.error('Error processing callback', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     res.status(500).json({
       success: false,
       message: 'Internal server error',
@@ -122,7 +124,7 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
   }
 }
 
-export async function getMaintenanceStatus(req: Request, res: Response): Promise<void> {
+export async function getMaintenanceStatus(_req: Request, res: Response): Promise<void> {
   try {
     const status = await maintenanceService.getStatus();
 

@@ -10,37 +10,41 @@ function placeBet(betNumber) {
     // Créer une connexion Socket.IO
     const socket = io(API_URL, {
       auth: {
-        token: AUTH_TOKEN
+        token: AUTH_TOKEN,
       },
       transports: ['websocket'],
-      reconnection: false
+      reconnection: false,
     });
 
     socket.on('connect', () => {
       console.log(`🔌 Bet #${betNumber} connected (socket: ${socket.id})`);
 
       // Placer le pari
-      socket.emit('bet:place', {
-        amount: 0.01,
-        currency: 'NANUSD'
-      }, (response) => {
-        const duration = Date.now() - startTime;
-        const sid = socket.id; // Sauvegarder avant disconnect
-        socket.disconnect();
+      socket.emit(
+        'bet:place',
+        {
+          amount: 0.01,
+          currency: 'NANUSD',
+        },
+        (response) => {
+          const duration = Date.now() - startTime;
+          const sid = socket.id; // Sauvegarder avant disconnect
+          socket.disconnect();
 
-        resolve({
-          betNumber,
-          response,
-          duration,
-          socketId: sid
-        });
-      });
+          resolve({
+            betNumber,
+            response,
+            duration,
+            socketId: sid,
+          });
+        }
+      );
     });
 
     socket.on('connect_error', (error) => {
       reject({
         betNumber,
-        error: error.message
+        error: error.message,
       });
     });
 
@@ -53,7 +57,7 @@ function placeBet(betNumber) {
       socket.disconnect();
       reject({
         betNumber,
-        error: 'Timeout'
+        error: 'Timeout',
       });
     }, 10000);
   });
@@ -63,17 +67,14 @@ async function testParallelBets() {
   console.log('🧪 Testing 2 parallel bet requests...\n');
 
   // Lancer 2 paris en parallèle
-  const promises = [
-    placeBet(1),
-    placeBet(2)
-  ];
+  const promises = [placeBet(1), placeBet(2)];
 
   try {
     const results = await Promise.all(promises);
 
     console.log('\n📊 RESULTS:\n');
 
-    results.forEach(result => {
+    results.forEach((result) => {
       console.log(`Bet #${result.betNumber}:`);
       console.log(`  Socket ID: ${result.socketId}`);
       console.log(`  Duration: ${result.duration}ms`);
@@ -86,8 +87,8 @@ async function testParallelBets() {
       console.log('');
     });
 
-    const successful = results.filter(r => r.response.success);
-    const failed = results.filter(r => !r.response.success);
+    const successful = results.filter((r) => r.response.success);
+    const failed = results.filter((r) => !r.response.success);
 
     console.log('='.repeat(50));
     console.log('📈 SUMMARY:');
@@ -99,14 +100,13 @@ async function testParallelBets() {
       console.log('\n⚠️  Both bets succeeded - This is expected if game is in betting phase');
     } else if (successful.length === 1) {
       console.log('\n✅ PASS: Only one bet succeeded');
-      const failureReasons = failed.map(f => f.response.code).join(', ');
+      const failureReasons = failed.map((f) => f.response.code).join(', ');
       console.log(`   Failure reasons: ${failureReasons}`);
     } else {
       console.log('\n❌ No bet succeeded');
     }
 
     process.exit(0);
-
   } catch (error) {
     console.error('❌ Test failed:', error);
     process.exit(1);

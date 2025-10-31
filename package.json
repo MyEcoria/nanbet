@@ -11,16 +11,10 @@
     "start": "bun run src/app.ts",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "lint:fix-unsafe": "biome check --write --unsafe .",
     "format": "biome format --write .",
-    "check": "biome check --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit",
-    "docker:build": "docker-compose build",
-    "docker:up": "docker-compose up -d",
-    "docker:down": "docker-compose down",
-    "docker:logs": "docker-compose logs -f",
-    "docker:restart": "docker-compose restart backend",
-    "docker:db": "docker-compose exec mariadb mysql -u nanbet -p nanbet"
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",

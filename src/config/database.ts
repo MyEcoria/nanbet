@@ -33,14 +33,12 @@ const sequelize = new Sequelize({
   },
 });
 
-
 initUserModel(sequelize);
 initLoginHistoryModel(sequelize);
 initCrashGameModel(sequelize);
 initCrashBetModel(sequelize);
 initWithdrawalModel(sequelize);
 initMaintenanceModel(sequelize);
-
 
 User.hasMany(LoginHistory, {
   foreignKey: 'userId',
@@ -51,7 +49,6 @@ LoginHistory.belongsTo(User, {
   foreignKey: 'userId',
   as: 'user',
 });
-
 
 CrashGame.hasMany(CrashBet, {
   foreignKey: 'gameId',

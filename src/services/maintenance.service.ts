@@ -1,4 +1,3 @@
-import { Op } from 'sequelize';
 import { Maintenance } from '../config/database';
 import type { MaintenanceStatus } from '../types/maintenance.types';
 import { logger } from '../utils/logger';
@@ -55,8 +54,7 @@ class MaintenanceService {
   private buildStatus(maintenance: Maintenance): MaintenanceStatus {
     const now = new Date();
     const isScheduled =
-      maintenance.scheduledStart !== null &&
-      new Date(maintenance.scheduledStart) > now;
+      maintenance.scheduledStart !== null && new Date(maintenance.scheduledStart) > now;
 
     return {
       isActive: maintenance.isActive,
@@ -72,7 +70,10 @@ class MaintenanceService {
     if (!this.currentStatus) {
       await this.loadCurrentStatus();
     }
-    return this.currentStatus!;
+    if (!this.currentStatus) {
+      throw new Error('Failed to load maintenance status');
+    }
+    return this.currentStatus;
   }
 
   async isMaintenanceActive(): Promise<boolean> {
@@ -80,7 +81,10 @@ class MaintenanceService {
     return status.isActive;
   }
 
-  async activateMaintenance(estimatedDuration?: number, message?: string): Promise<MaintenanceStatus> {
+  async activateMaintenance(
+    estimatedDuration?: number,
+    message?: string
+  ): Promise<MaintenanceStatus> {
     try {
       const now = new Date();
       const scheduledEnd = estimatedDuration
@@ -128,7 +132,8 @@ class MaintenanceService {
         scheduledStart,
         scheduledEnd,
         estimatedDuration,
-        message: message ||
+        message:
+          message ||
           `Scheduled maintenance on ${scheduledStart.toLocaleString('en-US')} for an estimated duration of ${estimatedDuration} minutes.`,
       });
 

@@ -19,7 +19,8 @@ export type CryptoTicker = 'XNO' | 'XRO' | 'BAN' | 'XDG' | 'ANA' | 'NANUSD';
 
 export interface NanswapWalletRequest {
   action: string;
-  wallet: string;
+  wallet?: string;
+  account?: string;
   source?: string;
   destination?: string;
   amount?: string;
@@ -30,6 +31,9 @@ export interface NanswapWalletResponse {
   account?: string;
   block?: string;
   error?: string;
+  balance?: string;
+  pending?: string;
+  receivable?: string;
 }
 
 export interface SignedHeaders {

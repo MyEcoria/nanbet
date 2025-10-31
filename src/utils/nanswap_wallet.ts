@@ -21,7 +21,7 @@ export async function create_account(): Promise<string> {
     wallet: getEnvVar('NANSWAP_NODES_WALLET_ID'),
   };
 
-  const res = await fetch(getEnvVar('NANSWAP_NODES_WALLET_RPC'), {
+  const res = await fetch(`${getEnvVar('NANSWAP_NODES_WALLET_RPC')}ALL`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ export async function sendFeeless(
     ticker: ticker,
   };
 
-  const res = await fetch(getEnvVar('NANSWAP_NODES_WALLET_RPC'), {
+  const res = await fetch(`${getEnvVar('NANSWAP_NODES_WALLET_RPC')}ALL`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -74,6 +74,29 @@ export async function sendFeeless(
   }
 
   return resData.block;
+}
+
+export async function getAccountBalance(
+  address: string,
+  ticker: string
+): Promise<NanswapWalletResponse> {
+  const body: NanswapWalletRequest = {
+    action: 'account_balance',
+    account: address,
+  };
+
+  const res = await fetch(getEnvVar('NANSWAP_NODES_WALLET_RPC') + ticker, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...getSignedHeaders(body),
+    },
+    body: JSON.stringify(body),
+  });
+
+  const resData = (await res.json()) as NanswapWalletResponse;
+
+  return resData;
 }
 
 function getSignedHeaders(message: NanswapWalletRequest): SignedHeaders {

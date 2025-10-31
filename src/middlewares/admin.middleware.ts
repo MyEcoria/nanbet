@@ -1,11 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import { logger } from '../utils/logger';
 
-export function verifyAdminKey(
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void {
+export function verifyAdminKey(req: Request, res: Response, next: NextFunction): void {
   try {
     const adminKey = req.headers['x-admin-key'] as string;
 

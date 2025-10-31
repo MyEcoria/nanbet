@@ -154,7 +154,9 @@ async function runTest() {
     console.log(`  Crash detected at:    ${result.timing.crashDetectedAt}ms`);
     console.log(`  Cashout attempted at: ${result.timing.cashoutAttemptedAt}ms`);
     console.log(`  Cashout response at:  ${result.timing.cashoutResponseAt}ms`);
-    console.log(`  Reaction time:        ${result.timing.cashoutAttemptedAt - result.timing.crashDetectedAt}ms`);
+    console.log(
+      `  Reaction time:        ${result.timing.cashoutAttemptedAt - result.timing.crashDetectedAt}ms`
+    );
     console.log(`  Network latency:      ${result.timing.latency}ms\n`);
 
     console.log('Crash Information:');

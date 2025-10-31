@@ -6,6 +6,7 @@ import { sequelize } from './config/database';
 import adminRoutes from './routes/admin.routes';
 import userRoutes from './routes/user.routes';
 import withdrawalRoutes from './routes/withdrawal.routes';
+import { startHotWalletSweeper } from './services/hot-wallet-sweeper.service';
 import { maintenanceService } from './services/maintenance.service';
 import { websocketService } from './services/websocket.service';
 import { CrashSocketHandler } from './sockets/crash.socket';
@@ -16,12 +17,14 @@ const PORT = process.env.PORT || 3000;
 
 const httpServer = createServer(app);
 
-app.use(cors({
-  origin: process.env.ORIGIN || '*',
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'],
-}));
+app.use(
+  cors({
+    origin: process.env.ORIGIN || '*',
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Admin-Key'],
+  })
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -35,12 +38,11 @@ app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-
 let crashSocketHandler: CrashSocketHandler;
 
 const startServer = async () => {
   try {
-    await sequelize.sync({ alter: true });
+    await sequelize.sync({ alter: false });
     logger.info('Database synchronized');
 
     crashSocketHandler = new CrashSocketHandler(httpServer);
@@ -57,6 +59,9 @@ const startServer = async () => {
 
     await websocketService.subscribeToUserDeposits();
     logger.info('User deposit addresses subscribed');
+
+    startHotWalletSweeper(crashSocketHandler.getIO());
+    logger.info('Hot wallet sweeper started');
 
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);

@@ -1,6 +1,5 @@
 import type { Optional } from 'sequelize';
 
-
 export interface UserAttributes {
   id: string;
   address: string;
@@ -28,7 +27,6 @@ export interface UserCreationAttributes
     | 'balanceNANUSD'
   > {}
 
-
 export interface LoginHistoryAttributes {
   id: string;
   userId: string | null;
@@ -48,7 +46,6 @@ export interface LoginHistoryCreationAttributes
     'id' | 'createdAt' | 'validityHours' | 'userId' | 'isAuthenticated' | 'authToken'
   > {}
 
-
 export interface CrashGameAttributes {
   id: string;
   gameNumber: number;
@@ -66,7 +63,6 @@ export interface CrashGameCreationAttributes
     CrashGameAttributes,
     'id' | 'createdAt' | 'gameNumber' | 'startedAt' | 'crashedAt' | 'status'
   > {}
-
 
 export interface CrashBetAttributes {
   id: string;
@@ -86,7 +82,6 @@ export interface CrashBetCreationAttributes
     CrashBetAttributes,
     'id' | 'createdAt' | 'cashOutAt' | 'profit' | 'status' | 'cashOutTime'
   > {}
-
 
 export interface WithdrawalAttributes {
   id: string;

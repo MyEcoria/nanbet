@@ -1,11 +1,15 @@
 import type { Request, Response } from 'express';
-import type { ActivateMaintenanceRequest, ScheduleMaintenanceRequest } from '../types/maintenance.types';
-import { maintenanceService } from '../services/maintenance.service';
-import { logger } from '../utils/logger';
-import * as sseService from '../services/sse.service';
 import { Withdrawal } from '../models/Withdrawal.model';
+import { maintenanceService } from '../services/maintenance.service';
+import * as sseService from '../services/sse.service';
+import type {
+  ActivateMaintenanceRequest,
+  MaintenanceStatus,
+  ScheduleMaintenanceRequest,
+} from '../types/maintenance.types';
+import { logger } from '../utils/logger';
 
-export async function getMaintenanceStatus(req: Request, res: Response): Promise<void> {
+export async function getMaintenanceStatus(_req: Request, res: Response): Promise<void> {
   try {
     const status = await maintenanceService.getStatus();
 
@@ -176,7 +180,7 @@ export async function cancelScheduledMaintenance(req: Request, res: Response): P
   }
 }
 
-function broadcastMaintenanceStatus(status: any): void {
+function broadcastMaintenanceStatus(status: MaintenanceStatus): void {
   sseService.broadcastToAll('maintenance:update', {
     maintenance: status,
     timestamp: new Date().toISOString(),

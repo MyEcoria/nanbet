@@ -1,5 +1,11 @@
 import { Router } from 'express';
-import { callback, events, getMe, initiate, getMaintenanceStatus } from '../controllers/user.controller';
+import {
+  callback,
+  events,
+  getMaintenanceStatus,
+  getMe,
+  initiate,
+} from '../controllers/user.controller';
 import { verifyToken } from '../middlewares/auth.middleware';
 
 const router = Router();

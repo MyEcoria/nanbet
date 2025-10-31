@@ -1,11 +1,14 @@
 import wallets from '../config/wallets';
 
-export function validateAndNormalizeAmount(amount: number, currency: string): {
+export function validateAndNormalizeAmount(
+  amount: number,
+  currency: string
+): {
   valid: boolean;
   normalizedAmount?: number;
   error?: string;
 } {
-  if (typeof amount !== 'number' || isNaN(amount)) {
+  if (typeof amount !== 'number' || Number.isNaN(amount)) {
     return { valid: false, error: 'Invalid amount format' };
   }
 

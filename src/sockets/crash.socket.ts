@@ -152,16 +152,24 @@ export class CrashSocketHandler {
             return;
           }
 
+          if (!validation.normalizedAmount) {
+            callback({
+              success: false,
+              error: 'Invalid bet amount',
+              code: 'INVALID_AMOUNT',
+            });
+            return;
+          }
+
           const result = await this.crashService.placeBet(
             userId,
-            validation.normalizedAmount!,
+            validation.normalizedAmount,
             currency
           );
 
           callback(result);
 
           if (!result.success) {
-            
             socket.emit('bet:error', {
               message: result.error || 'Failed to place bet',
               code: result.code || 'UNKNOWN',
@@ -186,7 +194,6 @@ export class CrashSocketHandler {
           callback(result);
 
           if (!result.success) {
-            
             socket.emit('bet:error', {
               message: result.error || 'Failed to cash out',
               code: result.code || 'UNKNOWN',

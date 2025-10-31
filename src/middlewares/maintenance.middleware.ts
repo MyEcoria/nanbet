@@ -3,7 +3,7 @@ import { maintenanceService } from '../services/maintenance.service';
 import { logger } from '../utils/logger';
 
 export async function checkMaintenance(
-  req: Request,
+  _req: Request,
   res: Response,
   next: NextFunction
 ): Promise<void> {

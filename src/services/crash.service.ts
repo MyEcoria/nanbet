@@ -18,7 +18,7 @@ import { logger } from '../utils/logger';
 import {
   calculateMultiplier,
   calculateTimeToMultiplier,
-  ProvablyFairGenerator,
+  generateGameSeeds,
 } from '../utils/provably-fair';
 
 export class CrashGameService {
@@ -50,7 +50,6 @@ export class CrashGameService {
     logger.info('[Crash] Starting crash game service');
     await this.startNewGame();
   }
-
 
   public stop(): void {
     logger.info('[Crash] Stopping crash game service');
@@ -109,21 +108,15 @@ export class CrashGameService {
     }
   }
 
-  
   private async startNewGame(): Promise<void> {
     try {
-      
-      const { serverSeed, serverSeedHash, crashPoint } = ProvablyFairGenerator.generateGameSeeds(
-        this.config.houseEdge
-      );
+      const { serverSeed, serverSeedHash, crashPoint } = generateGameSeeds(this.config.houseEdge);
 
-      
       const lastGame = await CrashGame.findOne({
         order: [['gameNumber', 'DESC']],
       });
       const gameNumber = lastGame?.gameNumber ? lastGame.gameNumber + 1 : 1;
 
-      
       this.currentGame = await CrashGame.create({
         gameNumber,
         serverSeed,
@@ -138,7 +131,6 @@ export class CrashGameService {
         crashPoint: this.currentGame.crashPoint,
       });
 
-      
       const startingData: GameStartingData = {
         gameId: this.currentGame.id,
         gameNumber: this.currentGame.gameNumber,
@@ -147,7 +139,6 @@ export class CrashGameService {
       };
       this.io.emit('game:starting', startingData);
 
-      
       this.gameTimer = setTimeout(() => {
         this.runGame().catch((error) => {
           logger.error('[Crash] Error running game', { error });
@@ -155,12 +146,11 @@ export class CrashGameService {
       }, this.config.bettingDuration * 1000);
     } catch (error) {
       logger.error('[Crash] Error starting new game', { error });
-      
+
       setTimeout(() => this.startNewGame(), 5000);
     }
   }
 
-  
   private async runGame(): Promise<void> {
     if (!this.currentGame) {
       logger.error('[Crash] No current game to run');
@@ -168,7 +158,6 @@ export class CrashGameService {
     }
 
     try {
-      
       await this.currentGame.update({
         status: 'running',
         startedAt: new Date(),
@@ -181,7 +170,6 @@ export class CrashGameService {
         gameNumber: this.currentGame.gameNumber,
       });
 
-      
       const startedData: GameStartedData = {
         gameId: this.currentGame.id,
         gameNumber: this.currentGame.gameNumber,
@@ -189,7 +177,6 @@ export class CrashGameService {
       };
       this.io.emit('game:started', startedData);
 
-      
       await CrashBet.update(
         { status: 'playing' },
         {
@@ -200,13 +187,10 @@ export class CrashGameService {
         }
       );
 
-      
       this.startGameTick();
 
-      
       const crashTime = calculateTimeToMultiplier(this.currentGame.crashPoint);
 
-      
       this.gameTimer = setTimeout(() => {
         this.crashGame().catch((error) => {
           logger.error('[Crash] Error crashing game', { error });
@@ -218,7 +202,6 @@ export class CrashGameService {
     }
   }
 
-  
   private startGameTick(): void {
     this.tickTimer = setInterval(() => {
       if (!this.currentGame || this.currentGame.status !== 'running') {
@@ -239,7 +222,6 @@ export class CrashGameService {
     }, this.config.tickRate);
   }
 
-  
   private async crashGame(): Promise<void> {
     if (!this.currentGame) {
       logger.error('[Crash] No current game to crash');
@@ -247,13 +229,11 @@ export class CrashGameService {
     }
 
     try {
-      
       if (this.tickTimer) {
         clearInterval(this.tickTimer);
         this.tickTimer = null;
       }
 
-      
       await this.currentGame.update({
         status: 'crashed',
         crashedAt: new Date(),
@@ -265,7 +245,6 @@ export class CrashGameService {
         crashPoint: this.currentGame.crashPoint,
       });
 
-      
       await CrashBet.update(
         {
           status: 'lost',
@@ -279,7 +258,6 @@ export class CrashGameService {
         }
       );
 
-      
       const crashedData: GameCrashedData = {
         gameId: this.currentGame.id,
         gameNumber: this.currentGame.gameNumber,
@@ -307,18 +285,16 @@ export class CrashGameService {
       }
     } catch (error) {
       logger.error('[Crash] Error in crashGame', { error });
-      
+
       setTimeout(() => this.startNewGame(), 5000);
     }
   }
-
 
   public async placeBet(
     userId: string,
     amount: number,
     currency: string
   ): Promise<{ success: boolean; betId?: string; error?: string; code?: string }> {
-
     if (!this.checkRateLimit(userId, 'bet')) {
       return {
         success: false,
@@ -326,7 +302,6 @@ export class CrashGameService {
         code: 'RATE_LIMIT',
       };
     }
-
 
     if (!this.currentGame || this.currentGame.status !== 'betting') {
       return {
@@ -346,7 +321,6 @@ export class CrashGameService {
       };
     }
 
-    
     const gameId = this.currentGame.id;
 
     const wallet = wallets[currency as keyof typeof wallets];
@@ -422,14 +396,12 @@ export class CrashGameService {
         gameId,
       });
 
-
       this.io.emit('bet:placed', {
         betId: result.bet.id,
         userId,
         amount,
         currency,
       });
-
 
       this.io.to(`user:${userId}`).emit('balance:update', {
         balanceXNO: parseFloat(String(result.user.balanceXNO)),
@@ -481,7 +453,6 @@ export class CrashGameService {
     }
   }
 
-  
   public async cashOut(userId: string): Promise<{
     success: boolean;
     profit?: number;
@@ -489,7 +460,6 @@ export class CrashGameService {
     error?: string;
     code?: string;
   }> {
-    
     if (!this.checkRateLimit(userId, 'cashout')) {
       return {
         success: false,
@@ -498,7 +468,6 @@ export class CrashGameService {
       };
     }
 
-    
     if (!this.currentGame || this.currentGame.status !== 'running') {
       return {
         success: false,
@@ -507,17 +476,13 @@ export class CrashGameService {
       };
     }
 
-    
     const gameId = this.currentGame.id;
 
     try {
-      
       const timeElapsed = Date.now() - this.gameStartTime;
       const currentMultiplier = calculateMultiplier(timeElapsed);
 
-      
       const result = await sequelize.transaction(async (t) => {
-        
         const bet = await CrashBet.findOne({
           where: {
             userId,
@@ -532,9 +497,7 @@ export class CrashGameService {
           throw new Error('No active bet found');
         }
 
-
         const profit = parseFloat(String(bet.betAmount)) * (currentMultiplier - 1);
-
 
         const wallet = wallets[bet.currency as keyof typeof wallets];
         if (!wallet) {
@@ -545,7 +508,6 @@ export class CrashGameService {
           throw new Error('Profit exceeds maximum allowed');
         }
 
-        
         await bet.update(
           {
             status: 'cashed_out',
@@ -556,7 +518,6 @@ export class CrashGameService {
           { transaction: t }
         );
 
-        
         const user = await User.findByPk(userId, {
           transaction: t,
           lock: t.LOCK.UPDATE,
@@ -573,7 +534,6 @@ export class CrashGameService {
 
         await user.update({ [balanceField]: newBalance }, { transaction: t });
 
-        
         await user.reload({ transaction: t });
 
         return { bet, profit, user };
@@ -586,7 +546,6 @@ export class CrashGameService {
         profit: result.profit,
       });
 
-
       this.io.emit('bet:cashout', {
         betId: result.bet.id,
         userId,
@@ -594,7 +553,6 @@ export class CrashGameService {
         profit: result.profit,
         currency: result.bet.currency,
       });
-
 
       this.io.to(`user:${userId}`).emit('balance:update', {
         balanceXNO: parseFloat(String(result.user.balanceXNO)),
@@ -641,7 +599,6 @@ export class CrashGameService {
     }
   }
 
-
   public async getCurrentGameState(userId?: string): Promise<GameStateData | null> {
     if (!this.currentGame) {
       return null;
@@ -676,7 +633,9 @@ export class CrashGameService {
 
     let userBet: { betId: string; amount: number; currency: string } | undefined;
     if (userId) {
-      const bet = bets.find((b) => b.userId === userId && (b.status === 'pending' || b.status === 'playing'));
+      const bet = bets.find(
+        (b) => b.userId === userId && (b.status === 'pending' || b.status === 'playing')
+      );
       if (bet) {
         userBet = {
           betId: bet.id,
@@ -703,7 +662,6 @@ export class CrashGameService {
     };
   }
 
-  
   public async getGameHistory(limit = 10): Promise<GameHistoryItem[]> {
     const games = await CrashGame.findAll({
       where: {
@@ -723,30 +681,26 @@ export class CrashGameService {
       }));
   }
 
-  
   private checkRateLimit(userId: string, action: 'bet' | 'cashout'): boolean {
     const now = Date.now();
-    const windowMs = 60000; 
-    const maxAttempts = action === 'bet' ? 10 : 20; 
+    const windowMs = 60000;
+    const maxAttempts = action === 'bet' ? 10 : 20;
 
     const attemptsMap = action === 'bet' ? this.betAttempts : this.cashOutAttempts;
     const attempts = attemptsMap.get(userId) || [];
 
-    
     const recentAttempts = attempts.filter((timestamp) => now - timestamp < windowMs);
 
     if (recentAttempts.length >= maxAttempts) {
       return false;
     }
 
-    
     recentAttempts.push(now);
     attemptsMap.set(userId, recentAttempts);
 
     return true;
   }
 
-  
   public cleanupRateLimits(): void {
     const now = Date.now();
     const windowMs = 60000;

@@ -75,14 +75,14 @@ function generateAuthToken(userId: string, address: string): string {
 
   const token = crypto
     .createHash('sha256')
-    .update(JSON.stringify(payload) + process.env.SECRET_KEY || 'default-secret')
+    .update(JSON.stringify(payload) + (process.env.SECRET_KEY || 'default-secret'))
     .digest('hex');
 
   return token;
 }
 
 export async function processCallback(
-  data: CallbackRequest,
+  data: CallbackRequest
 ): Promise<{ success: boolean; userId?: string; sessionId?: string; message: string }> {
   try {
     const messageMatch = data.message.match(/^Signed Message: (.+)$/);
@@ -144,7 +144,10 @@ export async function processCallback(
       message: 'Authentication successful',
     };
   } catch (error) {
-    logger.error('Error processing callback', { error });
+    logger.error('Error processing callback', {
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
     return { success: false, message: 'Internal server error' };
   }
 }

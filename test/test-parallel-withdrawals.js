@@ -8,7 +8,7 @@ function makeWithdrawalRequest(requestNumber) {
   const data = JSON.stringify({
     currency: 'NANUSD',
     amount: 0.01,
-    destinationAddress: 'usd_1rtdak43tizb6b5x8qoxh1rd8spuagt99yjohdxxupygqe3h6cpx3rpph1kg'
+    destinationAddress: 'usd_1rtdak43tizb6b5x8qoxh1rd8spuagt99yjohdxxupygqe3h6cpx3rpph1kg',
   });
 
   const options = {
@@ -19,8 +19,8 @@ function makeWithdrawalRequest(requestNumber) {
     headers: {
       'Content-Type': 'application/json',
       'Content-Length': data.length,
-      'Authorization': `Bearer ${AUTH_TOKEN}`
-    }
+      Authorization: `Bearer ${AUTH_TOKEN}`,
+    },
   };
 
   return new Promise((resolve, reject) => {
@@ -41,14 +41,14 @@ function makeWithdrawalRequest(requestNumber) {
             requestNumber,
             statusCode: res.statusCode,
             response,
-            duration
+            duration,
           });
         } catch (error) {
           resolve({
             requestNumber,
             statusCode: res.statusCode,
             response: body,
-            duration
+            duration,
           });
         }
       });
@@ -57,7 +57,7 @@ function makeWithdrawalRequest(requestNumber) {
     req.on('error', (error) => {
       reject({
         requestNumber,
-        error: error.message
+        error: error.message,
       });
     });
 
@@ -70,17 +70,14 @@ async function testParallelWithdrawals() {
   console.log('🧪 Testing 2 parallel withdrawal requests...\n');
 
   // Lancer 2 requêtes en parallèle
-  const promises = [
-    makeWithdrawalRequest(1),
-    makeWithdrawalRequest(2)
-  ];
+  const promises = [makeWithdrawalRequest(1), makeWithdrawalRequest(2)];
 
   try {
     const results = await Promise.all(promises);
 
     console.log('📊 RESULTS:\n');
 
-    results.forEach(result => {
+    results.forEach((result) => {
       console.log(`Request #${result.requestNumber}:`);
       console.log(`  Status: ${result.statusCode}`);
       console.log(`  Duration: ${result.duration}ms`);
@@ -90,8 +87,8 @@ async function testParallelWithdrawals() {
       console.log('');
     });
 
-    const successful = results.filter(r => r.statusCode === 200 && r.response.success);
-    const failed = results.filter(r => r.statusCode !== 200 || !r.response.success);
+    const successful = results.filter((r) => r.statusCode === 200 && r.response.success);
+    const failed = results.filter((r) => r.statusCode !== 200 || !r.response.success);
 
     console.log('='.repeat(50));
     console.log('📈 SUMMARY:');
@@ -106,7 +103,6 @@ async function testParallelWithdrawals() {
     } else {
       console.log('\n⚠️  WARNING: No withdrawal succeeded');
     }
-
   } catch (error) {
     console.error('❌ Test failed:', error);
   }

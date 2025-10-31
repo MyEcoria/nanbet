@@ -139,7 +139,9 @@ function setupCrashListener() {
 async function runTest() {
   console.log('🧪 TEST: Race Condition - Multiple Parallel Cashouts After Crash\n');
   console.log('='.repeat(70));
-  console.log(`This test attempts ${NUM_PARALLEL_ATTEMPTS} simultaneous cashouts immediately after crash`);
+  console.log(
+    `This test attempts ${NUM_PARALLEL_ATTEMPTS} simultaneous cashouts immediately after crash`
+  );
   console.log('to verify there are no race condition vulnerabilities.');
   console.log('='.repeat(70));
   console.log('\n');
@@ -206,8 +208,12 @@ async function runTest() {
     console.log('='.repeat(70));
     console.log('📈 SUMMARY\n');
     console.log(`  Total attempts:     ${NUM_PARALLEL_ATTEMPTS}`);
-    console.log(`  Successful:         ${successCount} (${((successCount / NUM_PARALLEL_ATTEMPTS) * 100).toFixed(1)}%)`);
-    console.log(`  Failed:             ${failCount} (${((failCount / NUM_PARALLEL_ATTEMPTS) * 100).toFixed(1)}%)\n`);
+    console.log(
+      `  Successful:         ${successCount} (${((successCount / NUM_PARALLEL_ATTEMPTS) * 100).toFixed(1)}%)`
+    );
+    console.log(
+      `  Failed:             ${failCount} (${((failCount / NUM_PARALLEL_ATTEMPTS) * 100).toFixed(1)}%)\n`
+    );
 
     if (Object.keys(errors).length > 0) {
       console.log('  Error breakdown:');

@@ -46,7 +46,7 @@ export function addClient(sessionId: string, res: Response): void {
   const recentAuth = recentAuthentications.get(sessionId);
   const now = Date.now();
 
-  if (recentAuth && (now - recentAuth.timestamp) <= AUTH_CACHE_DURATION) {
+  if (recentAuth && now - recentAuth.timestamp <= AUTH_CACHE_DURATION) {
     // Envoyer immédiatement l'événement d'authentification
     logger.info(`Sending cached auth for session ${sessionId}`);
     sendEvent(sessionId, 'authenticated', {
@@ -124,7 +124,7 @@ export function sendAuthenticatedEvent(
   // Nettoyer le cache après la durée d'expiration
   setTimeout(() => {
     const cached = recentAuthentications.get(sessionId);
-    if (cached && (Date.now() - cached.timestamp) >= AUTH_CACHE_DURATION) {
+    if (cached && Date.now() - cached.timestamp >= AUTH_CACHE_DURATION) {
       recentAuthentications.delete(sessionId);
     }
   }, AUTH_CACHE_DURATION);

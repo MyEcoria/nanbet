@@ -1,5 +1,8 @@
 import { DataTypes, Model, type Sequelize } from 'sequelize';
-import type { MaintenanceAttributes, MaintenanceCreationAttributes } from '../types/maintenance.types';
+import type {
+  MaintenanceAttributes,
+  MaintenanceCreationAttributes,
+} from '../types/maintenance.types';
 
 export class Maintenance extends Model<MaintenanceAttributes, MaintenanceCreationAttributes> {
   declare id: string;
