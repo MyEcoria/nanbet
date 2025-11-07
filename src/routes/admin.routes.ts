@@ -2,6 +2,7 @@ import { Router } from 'express';
 import {
   activateMaintenance,
   cancelScheduledMaintenance,
+  checkAllDepositAddresses,
   deactivateMaintenance,
   getFailedWithdrawals,
   getMaintenanceStatus,
@@ -23,5 +24,8 @@ router.post('/maintenance/cancel', cancelScheduledMaintenance);
 
 // Withdrawal management routes
 router.get('/withdrawals/failed', getFailedWithdrawals);
+
+// Deposit address scanning route
+router.get('/check-addresses', checkAllDepositAddresses);
 
 export default router;

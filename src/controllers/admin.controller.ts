@@ -1,4 +1,6 @@
 import type { Request, Response } from 'express';
+import walletsConfig from '../config/wallets';
+import { User } from '../models/User.model';
 import { Withdrawal } from '../models/Withdrawal.model';
 import { maintenanceService } from '../services/maintenance.service';
 import * as sseService from '../services/sse.service';
@@ -7,7 +9,9 @@ import type {
   MaintenanceStatus,
   ScheduleMaintenanceRequest,
 } from '../types/maintenance.types';
+import type { CryptoTicker } from '../types/wallet.types';
 import { logger } from '../utils/logger';
+import { getAccountBalance } from '../utils/nanswap_wallet';
 
 export async function getMaintenanceStatus(_req: Request, res: Response): Promise<void> {
   try {
@@ -221,6 +225,119 @@ export async function getFailedWithdrawals(req: Request, res: Response): Promise
       success: false,
       error: 'INTERNAL_ERROR',
       message: 'Error getting failed withdrawals',
+    });
+  }
+}
+
+/**
+ * Converts a generic nan_ address to a ticker-specific address
+ */
+function convertAddressToTicker(nanAddress: string, ticker: CryptoTicker): string {
+  const addressBody = nanAddress.replace(/^nan_/, '');
+  const prefix = walletsConfig[ticker].prefix;
+  return `${prefix}_${addressBody}`;
+}
+
+/**
+ * Checks if a deposit address has any balance for a specific ticker
+ */
+async function checkDepositAddressForTicker(
+  nanAddress: string,
+  ticker: CryptoTicker
+): Promise<{ ticker: CryptoTicker; address: string; balance: string } | null> {
+  const depositAddress = convertAddressToTicker(nanAddress, ticker);
+
+  try {
+    const balanceData = await getAccountBalance(depositAddress, ticker);
+
+    if (balanceData.balance && balanceData.balance !== '0') {
+      return {
+        ticker,
+        address: depositAddress,
+        balance: balanceData.balance,
+      };
+    }
+
+    return null;
+  } catch (error) {
+    logger.error(`Error checking balance for ${depositAddress} (${ticker})`, {
+      error: error instanceof Error ? error.message : String(error),
+    });
+    throw error;
+  }
+}
+
+/**
+ * Scans all deposit addresses and checks if any have a balance
+ * Returns an error if any address has a non-zero balance
+ */
+export async function checkAllDepositAddresses(_req: Request, res: Response): Promise<void> {
+  try {
+    logger.info('[AdminController] Starting scan of all deposit addresses...');
+
+    const users = await User.findAll({
+      attributes: ['id', 'depositAddress'],
+    });
+
+    logger.info(`[AdminController] Scanning ${users.length} deposit addresses`);
+
+    const tickers = Object.keys(walletsConfig) as CryptoTicker[];
+    const addressesWithBalance: Array<{
+      userId: string;
+      depositAddress: string;
+      ticker: CryptoTicker;
+      address: string;
+      balance: string;
+    }> = [];
+
+    // Check all addresses for all tickers
+    for (const user of users) {
+      for (const ticker of tickers) {
+        const result = await checkDepositAddressForTicker(user.depositAddress, ticker);
+        if (result) {
+          addressesWithBalance.push({
+            userId: user.id,
+            depositAddress: user.depositAddress,
+            ...result,
+          });
+        }
+      }
+    }
+
+    if (addressesWithBalance.length > 0) {
+      logger.error('[AdminController] Found addresses with non-zero balances', {
+        count: addressesWithBalance.length,
+        addresses: addressesWithBalance,
+      });
+
+      res.status(500).json({
+        success: false,
+        error: 'ADDRESSES_NOT_EMPTY',
+        message: `Found ${addressesWithBalance.length} address(es) with non-zero balance`,
+        data: {
+          addressesWithBalance,
+          totalAddressesScanned: users.length * tickers.length,
+        },
+      });
+      return;
+    }
+
+    logger.info('[AdminController] All deposit addresses are empty');
+
+    res.json({
+      success: true,
+      message: 'All deposit addresses are empty',
+      data: {
+        totalAddressesScanned: users.length * tickers.length,
+        addressesWithBalance: 0,
+      },
+    });
+  } catch (error) {
+    logger.error('[AdminController] Error checking deposit addresses', { error });
+    res.status(500).json({
+      success: false,
+      error: 'INTERNAL_ERROR',
+      message: 'Error checking deposit addresses',
     });
   }
 }
