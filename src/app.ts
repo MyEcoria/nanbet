@@ -63,6 +63,13 @@ const startServer = async () => {
     startHotWalletSweeper(crashSocketHandler.getIO());
     logger.info('Hot wallet sweeper started');
 
+    // Reconnect WebSockets every hour
+    setInterval(() => {
+      websocketService.reconnectAll().catch((error) => {
+        logger.error('Failed to reconnect WebSockets', { error });
+      });
+    }, 3600000);
+
     httpServer.listen(PORT, () => {
       logger.info(`Server running on port ${PORT}`);
     });

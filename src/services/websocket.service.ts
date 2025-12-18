@@ -297,6 +297,13 @@ class WebSocketService {
     }
     this.connections.clear();
   }
+
+  public async reconnectAll(): Promise<void> {
+    logger.info('Reconnecting all WebSocket connections');
+    this.closeAll();
+    await this.initialize(this.io || undefined);
+    await this.subscribeToUserDeposits();
+  }
 }
 
 export const websocketService = new WebSocketService();
