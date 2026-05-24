@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import { wallet, tools } from 'nanocurrency-web';
+import { wallet, tools, box } from 'multi-nano-web';
 import { fn, col } from 'sequelize';
 import { CrashBet, User } from '../config/database';
 import { logger } from '../utils/logger';
@@ -100,12 +100,18 @@ async function authenticateNanChat(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 /**
- * Authenticates with NanChat then adds a member address to the configured group.
+ * Authenticates with NanChat, adds a member to the configured group, then
+ * generates a new shared wallet and distributes the encrypted shared key to
+ * all current participants (including the newly added member).
  */
 export async function addMemberToGroup(memberAddress: string): Promise<void> {
+  const accountData = wallet.fromLegacySeed(NANCHAT_PRIVATE_KEY).accounts[0];
+  const derivedPrivateKey = accountData.privateKey;
+
   const token = await authenticateNanChat();
 
-  const response = await fetch(`${NANCHAT_API_URL}/add-participants`, {
+  // 1. Add the participant — response contains the updated chat with all participants
+  const addResponse = await fetch(`${NANCHAT_API_URL}/add-participants`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -117,12 +123,62 @@ export async function addMemberToGroup(memberAddress: string): Promise<void> {
     }),
   });
 
-  if (!response.ok) {
-    const body = await response.text();
-    throw new Error(`NanChat add-participants failed (${response.status}): ${body}`);
+  if (!addResponse.ok) {
+    const body = await addResponse.text();
+    throw new Error(`NanChat add-participants failed (${addResponse.status}): ${body}`);
   }
 
+  const updatedChat = (await addResponse.json()) as {
+    participants: (string | { account?: string; _id?: string })[]
+  };
+
   logger.info('NanChat: member added to group', { memberAddress, groupId: NANCHAT_GROUP_ID });
+
+  // 2. Generate a fresh shared wallet for this group session
+  const sharedWallet = wallet.generate();
+  const sharedAccount = sharedWallet.accounts[0];
+  const sharedPk = sharedAccount.privateKey;
+  const sharedAddress = sharedAccount.address;
+
+  // 3. Extract all participant addresses from the updated chat
+  const participants = updatedChat.participants
+    .map((p) => (typeof p === 'string' ? p : (p.account ?? p._id ?? '')))
+    .filter(Boolean);
+
+  logger.info('NanChat: distributing shared key', {
+    groupId: NANCHAT_GROUP_ID,
+    participantCount: participants.length,
+  });
+
+  // 4. Encrypt the shared private key for each participant
+  const sharedKeys = participants.map((participant) => ({
+    sharedAccount: sharedAddress,
+    encryptedKey: box.encrypt(sharedPk, participant, derivedPrivateKey),
+    toAccount: participant,
+  }));
+
+  // 5. Push the new shared keys to NanChat
+  const keysResponse = await fetch(`${NANCHAT_API_URL}/sharedKeys`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      token,
+    },
+    body: JSON.stringify({
+      chatId: NANCHAT_GROUP_ID,
+      sharedKeys,
+    }),
+  });
+
+  if (!keysResponse.ok) {
+    const body = await keysResponse.text();
+    throw new Error(`NanChat sharedKeys failed (${keysResponse.status}): ${body}`);
+  }
+
+  logger.info('NanChat: shared keys distributed successfully', {
+    groupId: NANCHAT_GROUP_ID,
+    participantCount: participants.length,
+  });
 }
 
 // ---------------------------------------------------------------------------

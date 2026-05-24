@@ -26,6 +26,7 @@
     "crypto-js": "^4.2.0",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "multi-nano-web": "^1.8.0",
     "mysql2": "^3.15.3",
     "nanocurrency-web": "^1.4.3",
     "reconnecting-websocket": "^4.4.0",
