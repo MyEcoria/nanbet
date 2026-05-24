@@ -113,6 +113,8 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
         balanceXDG: req.user.balanceXDG,
         balanceNANUSD: req.user.balanceNANUSD,
         createdAt: req.user.createdAt,
+        estdanslegroupe: req.user.nanchatGroupMember,
+        wheelSpunAt: req.user.wheelSpunAt,
       },
     });
   } catch (error) {

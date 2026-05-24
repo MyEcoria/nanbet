@@ -11,6 +11,8 @@ export class User extends Model<UserAttributes, UserCreationAttributes> {
   declare balanceANA: number;
   declare balanceXDG: number;
   declare balanceNANUSD: number;
+  declare nanchatGroupMember: boolean;
+  declare wheelSpunAt: Date | null;
   declare createdAt: Date;
 }
 
@@ -70,6 +72,18 @@ export const initUserModel = (sequelize: Sequelize): typeof User => {
         allowNull: false,
         defaultValue: 0,
         comment: 'nanUSD balance',
+      },
+      nanchatGroupMember: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+        comment: 'Whether the user has been added to the NanChat group',
+      },
+      wheelSpunAt: {
+        type: DataTypes.DATE,
+        allowNull: true,
+        defaultValue: null,
+        comment: 'Date the welcome wheel was spun (null = not yet spun)',
       },
       createdAt: {
         type: DataTypes.DATE,

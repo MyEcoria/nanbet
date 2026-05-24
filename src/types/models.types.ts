@@ -10,6 +10,8 @@ export interface UserAttributes {
   balanceANA: number;
   balanceXDG: number;
   balanceNANUSD: number;
+  nanchatGroupMember: boolean;
+  wheelSpunAt: Date | null;
   createdAt: Date;
 }
 
@@ -25,6 +27,8 @@ export interface UserCreationAttributes
     | 'balanceANA'
     | 'balanceXDG'
     | 'balanceNANUSD'
+    | 'nanchatGroupMember'
+    | 'wheelSpunAt'
   > {}
 
 export interface LoginHistoryAttributes {
