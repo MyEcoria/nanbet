@@ -15,6 +15,8 @@ import { logger } from './utils/logger';
 const app: Application = express();
 const PORT = process.env.PORT || 3000;
 
+app.set('trust proxy', true);
+
 const httpServer = createServer(app);
 
 app.use(
