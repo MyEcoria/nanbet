@@ -23,37 +23,37 @@ export type WheelPrize =
   | { currency: 'NONE'; amount: 0 };
 
 const PRIZE_TABLE: WheelPrize[] = [
-  { currency: 'NONE', amount: 0 },      // 0   score  0– 9  → rien
-  { currency: 'XNO', amount: 0.1 },     // 1   score 10–19
-  { currency: 'XNO', amount: 0.5 },     // 2   score 20–29
-  { currency: 'BAN', amount: 100 },     // 3   score 30–39
-  { currency: 'NANUSD', amount: 0.1 },  // 4   score 40–49
-  { currency: 'BAN', amount: 500 },     // 5   score 50–54
-  { currency: 'NANUSD', amount: 0.5 },  // 6   score 55–59
-  { currency: 'XNO', amount: 1 },       // 7   score 60–64
-  { currency: 'NANUSD', amount: 1 },    // 8   score 65–69
-  { currency: 'BAN', amount: 1000 },    // 9   score 70–74
-  { currency: 'XNO', amount: 5 },       // 10  score 75–79
-  { currency: 'NANUSD', amount: 5 },    // 11  score 80–84
-  { currency: 'BAN', amount: 10000 },   // 12  score 85–89
-  { currency: 'NANUSD', amount: 5 },    // 13  score 90–100 (jackpot rare)
+  { currency: 'NONE', amount: 0 },      // 0   score  0–18  → rien
+  { currency: 'XNO', amount: 0.1 },     // 1   score 19–29
+  { currency: 'XNO', amount: 0.5 },     // 2   score 30–39
+  { currency: 'BAN', amount: 100 },     // 3   score 40–49
+  { currency: 'NANUSD', amount: 0.1 },  // 4   score 50–59
+  { currency: 'BAN', amount: 500 },     // 5   score 60–67
+  { currency: 'NANUSD', amount: 0.5 },  // 6   score 68–74
+  { currency: 'XNO', amount: 1 },       // 7   score 75–80
+  { currency: 'NANUSD', amount: 1 },    // 8   score 81–85
+  { currency: 'BAN', amount: 1000 },    // 9   score 86–89
+  { currency: 'XNO', amount: 5 },       // 10  score 90–93
+  { currency: 'NANUSD', amount: 5 },    // 11  score 94–96
+  { currency: 'BAN', amount: 10000 },   // 12  score 97–98
+  { currency: 'NANUSD', amount: 5 },    // 13  score 99–100 (jackpot rare)
 ];
 
 // Maps a score 0–100 to a prize table index
 function scoreToPrizeIndex(score: number): number {
-  if (score < 10) return 0;
-  if (score < 20) return 1;
-  if (score < 30) return 2;
-  if (score < 40) return 3;
-  if (score < 50) return 4;
-  if (score < 55) return 5;
-  if (score < 60) return 6;
-  if (score < 65) return 7;
-  if (score < 70) return 8;
-  if (score < 75) return 9;
-  if (score < 80) return 10;
-  if (score < 85) return 11;
-  if (score < 90) return 12;
+  if (score < 19) return 0;
+  if (score < 30) return 1;
+  if (score < 40) return 2;
+  if (score < 50) return 3;
+  if (score < 60) return 4;
+  if (score < 68) return 5;
+  if (score < 75) return 6;
+  if (score < 81) return 7;
+  if (score < 86) return 8;
+  if (score < 90) return 9;
+  if (score < 94) return 10;
+  if (score < 97) return 11;
+  if (score < 99) return 12;
   return 13;
 }
 
