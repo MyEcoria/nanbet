@@ -17,7 +17,7 @@ export async function initiateSession(ipAddress: string): Promise<{
 }> {
   const sessionId = uuidv4();
   const timestamp = Date.now();
-  const message = `login to myecoria.com -${sessionId}-${timestamp}`;
+  const message = `login to nanbet.io -${sessionId}-${timestamp}`;
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
   await LoginHistory.create({
