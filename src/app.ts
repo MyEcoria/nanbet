@@ -4,10 +4,14 @@ import cors from 'cors';
 import express, { type Application, type Request, type Response } from 'express';
 import { sequelize } from './config/database';
 import adminRoutes from './routes/admin.routes';
+import sportsRoutes from './routes/sports.routes';
 import userRoutes from './routes/user.routes';
 import withdrawalRoutes from './routes/withdrawal.routes';
 import { startHotWalletSweeper } from './services/hot-wallet-sweeper.service';
 import { maintenanceService } from './services/maintenance.service';
+import { polymarketSyncService } from './services/polymarket-sync.service';
+import { sportsService } from './services/sports.service';
+import { polymarketOddsService } from './services/sports-odds.service';
 import { websocketService } from './services/websocket.service';
 import { CrashSocketHandler } from './sockets/crash.socket';
 import { logger } from './utils/logger';
@@ -35,6 +39,7 @@ app.use(cookieParser());
 app.use('/user', userRoutes);
 app.use('/withdrawal', withdrawalRoutes);
 app.use('/admin', adminRoutes);
+app.use('/sports', sportsRoutes);
 
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
@@ -65,6 +70,15 @@ const startServer = async () => {
     startHotWalletSweeper(crashSocketHandler.getIO());
     logger.info('Hot wallet sweeper started');
 
+    sportsService.setIO(crashSocketHandler.getIO());
+    polymarketOddsService.start(crashSocketHandler.getIO());
+    polymarketSyncService.start();
+    logger.info('Sports betting services started');
+
+    setInterval(() => {
+      sportsService.cleanupRateLimits();
+    }, 60000);
+
     // Reconnect WebSockets every hour
     setInterval(() => {
       websocketService.reconnectAll().catch((error) => {
@@ -86,6 +100,8 @@ startServer();
 process.on('SIGINT', () => {
   logger.info('Shutting down gracefully');
   websocketService.closeAll();
+  polymarketSyncService.stop();
+  polymarketOddsService.stop();
   if (crashSocketHandler) {
     crashSocketHandler.stop();
   }
@@ -95,6 +111,8 @@ process.on('SIGINT', () => {
 process.on('SIGTERM', () => {
   logger.info('Shutting down gracefully');
   websocketService.closeAll();
+  polymarketSyncService.stop();
+  polymarketOddsService.stop();
   if (crashSocketHandler) {
     crashSocketHandler.stop();
   }

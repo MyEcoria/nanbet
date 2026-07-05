@@ -3,6 +3,8 @@ import { CrashBet, initCrashBetModel } from '../models/CrashBet.model';
 import { CrashGame, initCrashGameModel } from '../models/CrashGame.model';
 import { initLoginHistoryModel, LoginHistory } from '../models/LoginHistory.model';
 import { initMaintenanceModel, Maintenance } from '../models/Maintenance.model';
+import { initSportsBetModel, SportsBet } from '../models/SportsBet.model';
+import { initSportsMatchModel, SportsMatch } from '../models/SportsMatch.model';
 import { initUserModel, User } from '../models/User.model';
 import { initWithdrawalModel, Withdrawal } from '../models/Withdrawal.model';
 import { logger } from '../utils/logger';
@@ -39,6 +41,8 @@ initCrashGameModel(sequelize);
 initCrashBetModel(sequelize);
 initWithdrawalModel(sequelize);
 initMaintenanceModel(sequelize);
+initSportsMatchModel(sequelize);
+initSportsBetModel(sequelize);
 
 User.hasMany(LoginHistory, {
   foreignKey: 'userId',
@@ -80,4 +84,34 @@ Withdrawal.belongsTo(User, {
   as: 'user',
 });
 
-export { sequelize, User, LoginHistory, CrashGame, CrashBet, Withdrawal, Maintenance };
+SportsMatch.hasMany(SportsBet, {
+  foreignKey: 'matchId',
+  as: 'bets',
+});
+
+SportsBet.belongsTo(SportsMatch, {
+  foreignKey: 'matchId',
+  as: 'match',
+});
+
+User.hasMany(SportsBet, {
+  foreignKey: 'userId',
+  as: 'sportsBets',
+});
+
+SportsBet.belongsTo(User, {
+  foreignKey: 'userId',
+  as: 'user',
+});
+
+export {
+  sequelize,
+  User,
+  LoginHistory,
+  CrashGame,
+  CrashBet,
+  Withdrawal,
+  Maintenance,
+  SportsMatch,
+  SportsBet,
+};

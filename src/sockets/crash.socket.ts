@@ -11,6 +11,7 @@ import type {
 } from '../types/crash.types';
 import { validateAndNormalizeAmount } from '../utils/currency';
 import { logger } from '../utils/logger';
+import { registerSportsHandlers } from './sports.socket';
 
 export class CrashSocketHandler {
   private io: SocketIOServer<
@@ -119,6 +120,8 @@ export class CrashSocketHandler {
       this.sendGameState(socket.id, userId).catch((error) => {
         logger.error('[CrashSocket] Error sending game state', { error });
       });
+
+      registerSportsHandlers(this.io, socket, userId);
 
       socket.on('bet:place', async (data, callback) => {
         try {
