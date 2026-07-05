@@ -80,12 +80,7 @@ export const initSportsBetModel = (sequelize: Sequelize): typeof SportsBet => {
       sequelize,
       tableName: 'sports_bets',
       timestamps: false,
-      indexes: [
-        { fields: ['userId'] },
-        { fields: ['matchId'] },
-        { fields: ['status'] },
-        { fields: ['matchId', 'userId'], unique: true },
-      ],
+      indexes: [{ fields: ['userId'] }, { fields: ['matchId'] }, { fields: ['status'] }],
     }
   );
 

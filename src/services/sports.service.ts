@@ -80,16 +80,6 @@ class SportsService {
           throw new Error('BETTING_CLOSED');
         }
 
-        const existingBet = await SportsBet.findOne({
-          where: { userId, matchId },
-          transaction: t,
-          lock: t.LOCK.UPDATE,
-        });
-
-        if (existingBet) {
-          throw new Error('BET_ALREADY_PLACED');
-        }
-
         const odds = parseFloat(
           String(
             outcome === 'home'
@@ -159,10 +149,6 @@ class SportsService {
       const knownErrors: Record<string, { error: string; code: string }> = {
         MATCH_NOT_FOUND: { error: 'Match not found', code: 'MATCH_NOT_FOUND' },
         BETTING_CLOSED: { error: 'Betting is closed for this match', code: 'BETTING_CLOSED' },
-        BET_ALREADY_PLACED: {
-          error: 'You already have a bet on this match',
-          code: 'BET_ALREADY_PLACED',
-        },
         USER_NOT_FOUND: { error: 'User not found', code: 'USER_NOT_FOUND' },
         INSUFFICIENT_BALANCE: { error: 'Insufficient balance', code: 'INSUFFICIENT_BALANCE' },
         ODDS_TOO_LOW: {
