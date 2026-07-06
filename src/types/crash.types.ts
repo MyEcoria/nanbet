@@ -1,3 +1,11 @@
+import type {
+  PlaceSportsBetData,
+  SportsBetResponse,
+  SportsBetSettledData,
+  SportsMatchSummary,
+  SportsOddsUpdate,
+} from './sports.types';
+
 export interface ServerToClientEvents {
   'game:state': (data: GameStateData) => void;
   'game:starting': (data: GameStartingData) => void;
@@ -9,6 +17,9 @@ export interface ServerToClientEvents {
   'bet:error': (data: BetErrorData) => void;
   'balance:update': (data: BalanceUpdateData) => void;
   error: (data: ErrorData) => void;
+  'sports:matches': (data: SportsMatchSummary[]) => void;
+  'sports:odds': (data: SportsOddsUpdate) => void;
+  'sports:bet:settled': (data: SportsBetSettledData) => void;
 }
 
 export interface ClientToServerEvents {
@@ -16,6 +27,10 @@ export interface ClientToServerEvents {
   'bet:cashout': (callback: (response: CashOutResponse) => void) => void;
   'game:getState': (callback: (response: GameStateResponse) => void) => void;
   'game:getHistory': (limit: number, callback: (response: GameHistoryResponse) => void) => void;
+  'sports:bet:place': (
+    data: PlaceSportsBetData,
+    callback: (response: SportsBetResponse) => void
+  ) => void;
 }
 
 export interface InterServerEvents {
