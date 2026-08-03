@@ -115,6 +115,7 @@ export interface BalanceUpdateData {
   balanceANA: number;
   balanceXDG: number;
   balanceNANUSD: number;
+  balanceNANBTC: number;
 }
 
 export interface ErrorData {

@@ -134,6 +134,7 @@ class SportsService {
         balanceANA: parseFloat(String(result.user.balanceANA)),
         balanceXDG: parseFloat(String(result.user.balanceXDG)),
         balanceNANUSD: parseFloat(String(result.user.balanceNANUSD)),
+        balanceNANBTC: parseFloat(String(result.user.balanceNANBTC)),
       });
 
       return {
@@ -211,6 +212,7 @@ class SportsService {
             balanceANA: parseFloat(String(user.balanceANA)),
             balanceXDG: parseFloat(String(user.balanceXDG)),
             balanceNANUSD: parseFloat(String(user.balanceNANUSD)),
+            balanceNANBTC: parseFloat(String(user.balanceNANBTC)),
           });
 
           this.io.to(`user:${userId}`).emit('sports:bet:settled', {

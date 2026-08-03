@@ -111,6 +111,7 @@ class WebSocketService {
           balanceANA: parseFloat(String(user.balanceANA)),
           balanceXDG: parseFloat(String(user.balanceXDG)),
           balanceNANUSD: parseFloat(String(user.balanceNANUSD)),
+          balanceNANBTC: parseFloat(String(user.balanceNANBTC)),
         });
 
         this.io.to(`user:${user.id}`).emit('notification', {

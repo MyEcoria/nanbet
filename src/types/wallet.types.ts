@@ -15,7 +15,7 @@ export interface WalletConfig {
 
 export type WalletsConfig = Record<string, WalletConfig>;
 
-export type CryptoTicker = 'XNO' | 'XRO' | 'BAN' | 'XDG' | 'ANA' | 'NANUSD';
+export type CryptoTicker = 'XNO' | 'XRO' | 'BAN' | 'XDG' | 'ANA' | 'NANUSD' | 'NANBTC';
 
 export interface NanswapWalletRequest {
   action: string;

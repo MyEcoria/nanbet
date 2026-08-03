@@ -6,7 +6,7 @@ const NODES_API_KEY = process.env.NODES_API_KEY || '';
 
 const main: WalletsConfig = {
   XNO: {
-    mainAccountHot: 'nano_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'nano_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/XNO',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=XNO&api=${NODES_API_KEY}`],
     converter: new Converter('XNO'),
@@ -18,7 +18,7 @@ const main: WalletsConfig = {
     maxBet: 130,
   },
   XRO: {
-    mainAccountHot: 'xro_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'xro_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/XRO',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=XRO&api=${NODES_API_KEY}`],
     converter: new Converter('XRO'),
@@ -30,7 +30,7 @@ const main: WalletsConfig = {
     maxBet: 867398,
   },
   BAN: {
-    mainAccountHot: 'ban_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'ban_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/BAN',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=BAN&api=${NODES_API_KEY}`],
     converter: new Converter('BAN'),
@@ -42,7 +42,7 @@ const main: WalletsConfig = {
     maxBet: 90000,
   },
   XDG: {
-    mainAccountHot: 'xdg_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'xdg_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/XDG',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=XDG&api=${NODES_API_KEY}`],
     converter: new Converter('XDG'),
@@ -54,7 +54,7 @@ const main: WalletsConfig = {
     maxBet: 28352,
   },
   ANA: {
-    mainAccountHot: 'ana_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'ana_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/ANA',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=ANA&api=${NODES_API_KEY}`],
     converter: new Converter('ANA'),
@@ -66,7 +66,7 @@ const main: WalletsConfig = {
     maxBet: 53862940,
   },
   NANUSD: {
-    mainAccountHot: 'usd_1fhnfaone4wxc8ix94et63h9kr3cya7i786kjg34bttd48ce8y1gu18cwhoy',
+    mainAccountHot: 'usd_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
     RPC: 'https://nodes.nanswap.com/NANUSD',
     WS: [`wss://nodes.nanswap.com/ws/?ticker=NANUSD&api=${NODES_API_KEY}`],
     converter: new Converter('NANUSD'),
@@ -76,6 +76,18 @@ const main: WalletsConfig = {
     logo: 'https://nanswap.com/logo/NANUSD.svg',
     explorer: 'https://nanolooker.com/block/',
     maxBet: 100,
+  },
+  NANBTC: {
+    mainAccountHot: 'nanbtc_3bayq8u98ak736b8ggsea5j76qyqp49ntepudzsmpb3jg4yagjdbsyiqasru',
+    RPC: 'https://nodes.nanswap.com/NANBTC',
+    WS: [`wss://nodes.nanswap.com/ws/?ticker=NANBTC&api=${NODES_API_KEY}`],
+    converter: new Converter('NANBTC'),
+    name: 'nanBTC',
+    decimalsToShow: 3,
+    prefix: 'nanbtc',
+    logo: 'https://bucket.nanwallet.com/logo/BTC.svg',
+    explorer: 'https://nanolooker.com/block/',
+    maxBet: 0.01,
   },
 };
 

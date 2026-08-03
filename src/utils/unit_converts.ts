@@ -3,7 +3,7 @@ import Big from 'big.js';
 Big.NE = -31;
 Big.PE = 39;
 
-type UnitTicker = 'XNO' | 'NANUSD' | 'XRO' | 'ANA' | 'BAN' | 'XDG' | 'UNDEFINED';
+type UnitTicker = 'XNO' | 'NANUSD' | 'NANBTC' | 'XRO' | 'ANA' | 'BAN' | 'XDG' | 'UNDEFINED';
 
 interface UnitConfig {
   raw_in_mega: string | undefined;
@@ -18,6 +18,10 @@ const UNIT_TICKER: Record<UnitTicker, UnitConfig> = {
   NANUSD: {
     raw_in_mega: '1000000',
     mega_in_raw: '.000001',
+  },
+  NANBTC: {
+    raw_in_mega: '10000000000',
+    mega_in_raw: '.0000000001',
   },
   XRO: {
     raw_in_mega: '1000000000000000000000000000000',

@@ -112,6 +112,7 @@ export async function getMe(req: AuthRequest, res: Response): Promise<void> {
         balanceANA: req.user.balanceANA,
         balanceXDG: req.user.balanceXDG,
         balanceNANUSD: req.user.balanceNANUSD,
+        balanceNANBTC: req.user.balanceNANBTC,
         createdAt: req.user.createdAt,
         estdanslegroupe: req.user.nanchatGroupMember,
         wheelSpunAt: req.user.wheelSpunAt,

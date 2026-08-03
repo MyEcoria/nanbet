@@ -410,6 +410,7 @@ export class CrashGameService {
         balanceANA: parseFloat(String(result.user.balanceANA)),
         balanceXDG: parseFloat(String(result.user.balanceXDG)),
         balanceNANUSD: parseFloat(String(result.user.balanceNANUSD)),
+        balanceNANBTC: parseFloat(String(result.user.balanceNANBTC)),
       });
 
       this.io.to(`user:${userId}`).emit('notification', {
@@ -561,6 +562,7 @@ export class CrashGameService {
         balanceANA: parseFloat(String(result.user.balanceANA)),
         balanceXDG: parseFloat(String(result.user.balanceXDG)),
         balanceNANUSD: parseFloat(String(result.user.balanceNANUSD)),
+        balanceNANBTC: parseFloat(String(result.user.balanceNANBTC)),
       });
 
       const payout = parseFloat(String(result.bet.betAmount)) + result.profit;

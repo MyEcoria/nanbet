@@ -13,6 +13,7 @@ const MINIMUM_WITHDRAWAL_AMOUNTS: Record<string, number> = {
   ANA: 0.00001,
   XDG: 0.00001,
   NANUSD: 0.00001,
+  NANBTC: 0.00001,
 };
 
 interface CreateWithdrawalRequest {
