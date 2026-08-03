@@ -120,7 +120,7 @@ async function sweepDepositAddressForTicker(
 /**
  * Sweeps a single deposit address for all tickers
  */
-async function sweepDepositAddress(nanAddress: string): Promise<void> {
+export async function sweepDepositAddress(nanAddress: string): Promise<void> {
   const tickers = Object.keys(walletsConfig) as CryptoTicker[];
 
   await Promise.all(tickers.map((ticker) => sweepDepositAddressForTicker(nanAddress, ticker)));
