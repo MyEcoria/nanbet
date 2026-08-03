@@ -32,6 +32,9 @@ const SPORTS_CONFIG: { sport: string; tagSlugs: string[] }[] = [
 
 const MATCH_LIST_INTERVAL_MS = 60_000;
 const RESOLUTION_CHECK_INTERVAL_MS = 30_000;
+// A hung request (no response, no error) would otherwise stall the whole sync
+// loop forever - fetch() has no default timeout.
+const FETCH_TIMEOUT_MS = 15_000;
 
 interface GammaMarket {
   id: string;
@@ -228,57 +231,70 @@ class PolymarketSyncService {
       const seenEventIds = new Set<string>();
 
       for (const tagSlug of tagSlugs) {
-        const events = await this.fetchEvents({ closed: false }, tagSlug.trim());
-
-        for (const event of events) {
-          if (seenEventIds.has(event.id)) continue;
-          seenEventIds.add(event.id);
-
-          const match = extractMatch(event);
-          if (!match) continue;
-
-          const existing = await SportsMatch.findOne({ where: { polymarketEventId: event.id } });
-          const { homeFlag, awayFlag } = getTeamFlags(event);
-          const kickoff = new Date(event.startTime);
-
-          const attrs = {
-            slug: event.slug,
+        try {
+          const events = await this.fetchEvents({ closed: false }, tagSlug.trim());
+          logger.info('[PolymarketSync] Fetched events for tag', {
             sport,
-            homeTeam: match.homeTeam,
-            awayTeam: match.awayTeam,
-            homeFlag,
-            awayFlag,
-            startTime: kickoff,
-            homeTokenId: match.home.tokenId,
-            drawTokenId: match.draw?.tokenId ?? null,
-            awayTokenId: match.away.tokenId,
-            homeOdds: probabilityToOdds(match.home.price),
-            drawOdds: match.draw ? probabilityToOdds(match.draw.price) : null,
-            awayOdds: probabilityToOdds(match.away.price),
-            lastSyncedAt: new Date(),
-          };
+            tagSlug: tagSlug.trim(),
+            eventCount: events.length,
+          });
 
-          if (existing) {
-            // Self-heal matches wrongly flipped to "live" by the earlier startTime bug
-            // (it used the market's creation date instead of actual kickoff time).
-            const statusFix =
-              existing.status === 'live' && kickoff > new Date()
-                ? { status: 'scheduled' as const }
-                : {};
-            await existing.update({ ...attrs, ...statusFix });
-          } else {
-            await SportsMatch.create({
-              polymarketEventId: event.id,
-              status: 'scheduled',
-              ...attrs,
-            });
-            logger.info('[PolymarketSync] New match tracked', {
-              eventId: event.id,
+          for (const event of events) {
+            if (seenEventIds.has(event.id)) continue;
+            seenEventIds.add(event.id);
+
+            const match = extractMatch(event);
+            if (!match) continue;
+
+            const existing = await SportsMatch.findOne({ where: { polymarketEventId: event.id } });
+            const { homeFlag, awayFlag } = getTeamFlags(event);
+            const kickoff = new Date(event.startTime);
+
+            const attrs = {
+              slug: event.slug,
               sport,
               homeTeam: match.homeTeam,
               awayTeam: match.awayTeam,
-            });
+              homeFlag,
+              awayFlag,
+              startTime: kickoff,
+              homeTokenId: match.home.tokenId,
+              drawTokenId: match.draw?.tokenId ?? null,
+              awayTokenId: match.away.tokenId,
+              homeOdds: probabilityToOdds(match.home.price),
+              drawOdds: match.draw ? probabilityToOdds(match.draw.price) : null,
+              awayOdds: probabilityToOdds(match.away.price),
+              lastSyncedAt: new Date(),
+            };
+
+            if (existing) {
+              // Self-heal matches wrongly flipped to "live" by the earlier startTime bug
+              // (it used the market's creation date instead of actual kickoff time).
+              const statusFix =
+                existing.status === 'live' && kickoff > new Date()
+                  ? { status: 'scheduled' as const }
+                  : {};
+              await existing.update({ ...attrs, ...statusFix });
+            } else {
+              await SportsMatch.create({
+                polymarketEventId: event.id,
+                status: 'scheduled',
+                ...attrs,
+              });
+              logger.info('[PolymarketSync] New match tracked', {
+                eventId: event.id,
+                sport,
+                homeTeam: match.homeTeam,
+                awayTeam: match.awayTeam,
+              });
+            }
           }
+        } catch (error) {
+          logger.error('[PolymarketSync] Failed to sync tag, continuing with remaining tags', {
+            error: error instanceof Error ? error.message : String(error),
+            sport,
+            tagSlug: tagSlug.trim(),
+          });
         }
       }
     }
@@ -342,7 +358,9 @@ class PolymarketSyncService {
   }
 
   private async fetchEventsById(eventId: string): Promise<GammaEvent[]> {
-    const response = await fetch(`${GAMMA_API_URL}/events?id=${encodeURIComponent(eventId)}`);
+    const response = await fetch(`${GAMMA_API_URL}/events?id=${encodeURIComponent(eventId)}`, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
     if (!response.ok) {
       throw new Error(`Gamma API request failed (${response.status})`);
     }
@@ -370,7 +388,9 @@ class PolymarketSyncService {
         query.set(key, String(value));
       }
 
-      const response = await fetch(`${GAMMA_API_URL}/events?${query.toString()}`);
+      const response = await fetch(`${GAMMA_API_URL}/events?${query.toString()}`, {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      });
       if (!response.ok) {
         throw new Error(`Gamma API request failed (${response.status})`);
       }
