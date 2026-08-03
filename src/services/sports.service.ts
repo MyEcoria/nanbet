@@ -25,6 +25,7 @@ class SportsService {
 
     return matches.map((match) => ({
       id: match.id,
+      sport: match.sport,
       homeTeam: match.homeTeam,
       awayTeam: match.awayTeam,
       homeFlag: match.homeFlag,
@@ -32,7 +33,7 @@ class SportsService {
       startTime: match.startTime.toISOString(),
       status: match.status,
       homeOdds: parseFloat(String(match.homeOdds)),
-      drawOdds: parseFloat(String(match.drawOdds)),
+      drawOdds: match.drawOdds === null ? null : parseFloat(String(match.drawOdds)),
       awayOdds: parseFloat(String(match.awayOdds)),
       winningOutcome: match.winningOutcome,
     }));
@@ -78,6 +79,10 @@ class SportsService {
 
         if (match.status !== 'scheduled' && match.status !== 'live') {
           throw new Error('BETTING_CLOSED');
+        }
+
+        if (outcome === 'draw' && match.drawOdds === null) {
+          throw new Error('INVALID_OUTCOME');
         }
 
         const odds = parseFloat(
@@ -152,6 +157,7 @@ class SportsService {
         BETTING_CLOSED: { error: 'Betting is closed for this match', code: 'BETTING_CLOSED' },
         USER_NOT_FOUND: { error: 'User not found', code: 'USER_NOT_FOUND' },
         INSUFFICIENT_BALANCE: { error: 'Insufficient balance', code: 'INSUFFICIENT_BALANCE' },
+        INVALID_OUTCOME: { error: 'Invalid outcome for this match', code: 'INVALID_OUTCOME' },
         ODDS_TOO_LOW: {
           error: `Odds too low to bet (minimum ${MIN_BETTABLE_ODDS.toFixed(2)})`,
           code: 'ODDS_TOO_LOW',

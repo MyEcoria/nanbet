@@ -8,6 +8,7 @@ export interface SportsMatchAttributes {
   id: string;
   polymarketEventId: string;
   slug: string;
+  sport: string;
   homeTeam: string;
   awayTeam: string;
   homeFlag: string;
@@ -15,10 +16,10 @@ export interface SportsMatchAttributes {
   startTime: Date;
   status: SportsMatchStatus;
   homeTokenId: string;
-  drawTokenId: string;
+  drawTokenId: string | null;
   awayTokenId: string;
   homeOdds: number;
-  drawOdds: number;
+  drawOdds: number | null;
   awayOdds: number;
   winningOutcome: SportsOutcome | null;
   resolvedAt: Date | null;
@@ -59,6 +60,7 @@ export interface SportsBetCreationAttributes
 
 export interface SportsMatchSummary {
   id: string;
+  sport: string;
   homeTeam: string;
   awayTeam: string;
   homeFlag: string;
@@ -66,7 +68,7 @@ export interface SportsMatchSummary {
   startTime: string;
   status: SportsMatchStatus;
   homeOdds: number;
-  drawOdds: number;
+  drawOdds: number | null;
   awayOdds: number;
   winningOutcome: SportsOutcome | null;
 }
@@ -74,7 +76,7 @@ export interface SportsMatchSummary {
 export interface SportsOddsUpdate {
   matchId: string;
   homeOdds: number;
-  drawOdds: number;
+  drawOdds: number | null;
   awayOdds: number;
 }
 

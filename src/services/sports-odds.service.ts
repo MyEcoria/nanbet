@@ -19,7 +19,7 @@ interface TokenRoute {
 
 interface MatchOdds {
   home: number;
-  draw: number;
+  draw: number | null;
   away: number;
 }
 
@@ -128,7 +128,7 @@ class SportsOddsService {
     if (!route) return;
 
     const odds = probabilityToOdds(probability);
-    const current = this.currentOdds.get(route.matchId) ?? { home: 2, draw: 3, away: 2 };
+    const current = this.currentOdds.get(route.matchId) ?? { home: 2, draw: null, away: 2 };
     current[route.outcome] = odds;
     this.currentOdds.set(route.matchId, current);
 
@@ -165,14 +165,18 @@ class SportsOddsService {
 
     for (const match of matches) {
       this.tokenRoutes.set(match.homeTokenId, { matchId: match.id, outcome: 'home' });
-      this.tokenRoutes.set(match.drawTokenId, { matchId: match.id, outcome: 'draw' });
       this.tokenRoutes.set(match.awayTokenId, { matchId: match.id, outcome: 'away' });
-      assetIds.push(match.homeTokenId, match.drawTokenId, match.awayTokenId);
+      assetIds.push(match.homeTokenId, match.awayTokenId);
+
+      if (match.drawTokenId) {
+        this.tokenRoutes.set(match.drawTokenId, { matchId: match.id, outcome: 'draw' });
+        assetIds.push(match.drawTokenId);
+      }
 
       if (!this.currentOdds.has(match.id)) {
         this.currentOdds.set(match.id, {
           home: parseFloat(String(match.homeOdds)),
-          draw: parseFloat(String(match.drawOdds)),
+          draw: match.drawOdds === null ? null : parseFloat(String(match.drawOdds)),
           away: parseFloat(String(match.awayOdds)),
         });
       }

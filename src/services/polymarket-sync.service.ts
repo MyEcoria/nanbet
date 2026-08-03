@@ -6,7 +6,29 @@ import { sportsService } from './sports.service';
 import { polymarketOddsService } from './sports-odds.service';
 
 const GAMMA_API_URL = process.env.POLYMARKET_GAMMA_API_URL || 'https://gamma-api.polymarket.com';
-const WORLD_CUP_TAG_SLUG = process.env.POLYMARKET_WORLD_CUP_TAG_SLUG || 'fifa-world-cup';
+
+// Each sport is fetched from one or more Polymarket tags. Verified live against
+// the Gamma API: `soccer` covers league + World Cup fixtures, `tennis` covers
+// ATP/WTA/ITF matches, `basketball` covers NBA/NCAA/international, `baseball`
+// covers MLB/KBO. Override via env if a tag turns out to be wrong/renamed.
+const SPORTS_CONFIG: { sport: string; tagSlugs: string[] }[] = [
+  {
+    sport: 'football',
+    tagSlugs: (process.env.POLYMARKET_FOOTBALL_TAG_SLUGS || 'soccer,fifa-world-cup').split(','),
+  },
+  {
+    sport: 'tennis',
+    tagSlugs: (process.env.POLYMARKET_TENNIS_TAG_SLUGS || 'tennis').split(','),
+  },
+  {
+    sport: 'basketball',
+    tagSlugs: (process.env.POLYMARKET_BASKETBALL_TAG_SLUGS || 'basketball').split(','),
+  },
+  {
+    sport: 'baseball',
+    tagSlugs: (process.env.POLYMARKET_BASEBALL_TAG_SLUGS || 'baseball').split(','),
+  },
+];
 
 const MATCH_LIST_INTERVAL_MS = 60_000;
 const RESOLUTION_CHECK_INTERVAL_MS = 30_000;
@@ -43,6 +65,19 @@ interface GammaEvent {
   teams?: GammaTeam[];
 }
 
+interface OutcomePrice {
+  price: number;
+  tokenId: string;
+}
+
+interface ExtractedMatch {
+  homeTeam: string;
+  awayTeam: string;
+  home: OutcomePrice;
+  draw: OutcomePrice | null;
+  away: OutcomePrice;
+}
+
 // Gamma API encodes these list fields as JSON-stringified arrays rather than native arrays.
 function parseJsonArrayField(value: string | string[]): string[] {
   if (Array.isArray(value)) return value;
@@ -54,7 +89,7 @@ function parseJsonArrayField(value: string | string[]): string[] {
   }
 }
 
-function getYesPriceAndToken(market: GammaMarket): { price: number; tokenId: string } | null {
+function getYesPriceAndToken(market: GammaMarket): OutcomePrice | null {
   const outcomes = parseJsonArrayField(market.outcomes);
   const prices = parseJsonArrayField(market.outcomePrices);
   const tokenIds = parseJsonArrayField(market.clobTokenIds);
@@ -66,13 +101,13 @@ function getYesPriceAndToken(market: GammaMarket): { price: number; tokenId: str
 }
 
 /**
- * World Cup matches are modelled on Polymarket as one event containing 3 binary
+ * Soccer matches are modelled on Polymarket as one event containing 3 binary
  * (Yes/No) sub-markets - one per outcome (home win / draw / away win), each
  * distinguished by `groupItemTitle`. This heuristic isolates that shape from the
  * tournament-wide prop markets (e.g. "will Spain win the World Cup") that share
  * the same tag. Confirm/adjust against the live API if match events aren't found.
  */
-function identifyMatchEvent(event: GammaEvent): { homeTeam: string; awayTeam: string } | null {
+function extractThreeOutcomeMatch(event: GammaEvent): ExtractedMatch | null {
   if (event.markets.length !== 3) return null;
 
   // Full-time match-winner events are titled exactly "Team A vs. Team B" - variant
@@ -81,19 +116,14 @@ function identifyMatchEvent(event: GammaEvent): { homeTeam: string; awayTeam: st
   const vsMatch = event.title.match(/^(.+?)\s+(?:vs\.?|v\.?)\s+(.+)$/i);
   if (!vsMatch || event.title.includes(' - ')) return null;
 
-  return { homeTeam: vsMatch[1].trim(), awayTeam: vsMatch[2].trim() };
-}
+  const homeTeam = vsMatch[1].trim();
+  const awayTeam = vsMatch[2].trim();
 
-function classifyOutcomeMarkets(
-  markets: GammaMarket[],
-  homeTeam: string,
-  awayTeam: string
-): { home: GammaMarket; draw: GammaMarket; away: GammaMarket } | null {
   let home: GammaMarket | undefined;
   let draw: GammaMarket | undefined;
   let away: GammaMarket | undefined;
 
-  for (const market of markets) {
+  for (const market of event.markets) {
     const label = (market.groupItemTitle || '').trim().toLowerCase();
     if (!label) continue;
 
@@ -107,7 +137,46 @@ function classifyOutcomeMarkets(
   }
 
   if (!home || !draw || !away) return null;
-  return { home, draw, away };
+
+  const homePrice = getYesPriceAndToken(home);
+  const drawPrice = getYesPriceAndToken(draw);
+  const awayPrice = getYesPriceAndToken(away);
+  if (!homePrice || !drawPrice || !awayPrice) return null;
+
+  return { homeTeam, awayTeam, home: homePrice, draw: drawPrice, away: awayPrice };
+}
+
+/**
+ * Two-outcome sports (tennis, basketball, baseball, ...) model the match winner
+ * as a single market with two outcomes (team/player names), rather than separate
+ * Yes/No sub-markets. That moneyline market is reliably the one with no
+ * `groupItemTitle` - every prop/spread/totals sub-market on the same event has one
+ * (e.g. "Set 1 Winner", "Match O/U 21.5"), the overall match winner doesn't.
+ */
+function extractTwoOutcomeMatch(event: GammaEvent): ExtractedMatch | null {
+  const moneyline = event.markets.find((m) => !(m.groupItemTitle || '').trim());
+  if (!moneyline) return null;
+
+  const outcomes = parseJsonArrayField(moneyline.outcomes);
+  const prices = parseJsonArrayField(moneyline.outcomePrices);
+  const tokenIds = parseJsonArrayField(moneyline.clobTokenIds);
+
+  if (outcomes.length !== 2 || prices.length !== 2 || tokenIds.length !== 2) return null;
+  if (!outcomes[0] || !outcomes[1] || !prices[0] || !prices[1] || !tokenIds[0] || !tokenIds[1]) {
+    return null;
+  }
+
+  return {
+    homeTeam: outcomes[0],
+    awayTeam: outcomes[1],
+    home: { price: parseFloat(prices[0]), tokenId: tokenIds[0] },
+    draw: null,
+    away: { price: parseFloat(prices[1]), tokenId: tokenIds[1] },
+  };
+}
+
+function extractMatch(event: GammaEvent): ExtractedMatch | null {
+  return extractTwoOutcomeMatch(event) ?? extractThreeOutcomeMatch(event);
 }
 
 function getTeamFlags(event: GammaEvent): { homeFlag: string; awayFlag: string } {
@@ -146,59 +215,62 @@ class PolymarketSyncService {
   }
 
   public async fetchAndUpsertMatches(): Promise<void> {
-    const events = await this.fetchEvents({ closed: false });
+    for (const { sport, tagSlugs } of SPORTS_CONFIG) {
+      const seenEventIds = new Set<string>();
 
-    for (const event of events) {
-      const teams = identifyMatchEvent(event);
-      if (!teams) continue;
+      for (const tagSlug of tagSlugs) {
+        const events = await this.fetchEvents({ closed: false }, tagSlug.trim());
 
-      const classified = classifyOutcomeMarkets(event.markets, teams.homeTeam, teams.awayTeam);
-      if (!classified) continue;
+        for (const event of events) {
+          if (seenEventIds.has(event.id)) continue;
+          seenEventIds.add(event.id);
 
-      const home = getYesPriceAndToken(classified.home);
-      const draw = getYesPriceAndToken(classified.draw);
-      const away = getYesPriceAndToken(classified.away);
-      if (!home || !draw || !away) continue;
+          const match = extractMatch(event);
+          if (!match) continue;
 
-      const existing = await SportsMatch.findOne({ where: { polymarketEventId: event.id } });
-      const { homeFlag, awayFlag } = getTeamFlags(event);
-      const kickoff = new Date(event.startTime);
+          const existing = await SportsMatch.findOne({ where: { polymarketEventId: event.id } });
+          const { homeFlag, awayFlag } = getTeamFlags(event);
+          const kickoff = new Date(event.startTime);
 
-      const attrs = {
-        slug: event.slug,
-        homeTeam: teams.homeTeam,
-        awayTeam: teams.awayTeam,
-        homeFlag,
-        awayFlag,
-        startTime: kickoff,
-        homeTokenId: home.tokenId,
-        drawTokenId: draw.tokenId,
-        awayTokenId: away.tokenId,
-        homeOdds: probabilityToOdds(home.price),
-        drawOdds: probabilityToOdds(draw.price),
-        awayOdds: probabilityToOdds(away.price),
-        lastSyncedAt: new Date(),
-      };
+          const attrs = {
+            slug: event.slug,
+            sport,
+            homeTeam: match.homeTeam,
+            awayTeam: match.awayTeam,
+            homeFlag,
+            awayFlag,
+            startTime: kickoff,
+            homeTokenId: match.home.tokenId,
+            drawTokenId: match.draw?.tokenId ?? null,
+            awayTokenId: match.away.tokenId,
+            homeOdds: probabilityToOdds(match.home.price),
+            drawOdds: match.draw ? probabilityToOdds(match.draw.price) : null,
+            awayOdds: probabilityToOdds(match.away.price),
+            lastSyncedAt: new Date(),
+          };
 
-      if (existing) {
-        // Self-heal matches wrongly flipped to "live" by the earlier startTime bug
-        // (it used the market's creation date instead of actual kickoff time).
-        const statusFix =
-          existing.status === 'live' && kickoff > new Date()
-            ? { status: 'scheduled' as const }
-            : {};
-        await existing.update({ ...attrs, ...statusFix });
-      } else {
-        await SportsMatch.create({
-          polymarketEventId: event.id,
-          status: 'scheduled',
-          ...attrs,
-        });
-        logger.info('[PolymarketSync] New match tracked', {
-          eventId: event.id,
-          homeTeam: teams.homeTeam,
-          awayTeam: teams.awayTeam,
-        });
+          if (existing) {
+            // Self-heal matches wrongly flipped to "live" by the earlier startTime bug
+            // (it used the market's creation date instead of actual kickoff time).
+            const statusFix =
+              existing.status === 'live' && kickoff > new Date()
+                ? { status: 'scheduled' as const }
+                : {};
+            await existing.update({ ...attrs, ...statusFix });
+          } else {
+            await SportsMatch.create({
+              polymarketEventId: event.id,
+              status: 'scheduled',
+              ...attrs,
+            });
+            logger.info('[PolymarketSync] New match tracked', {
+              eventId: event.id,
+              sport,
+              homeTeam: match.homeTeam,
+              awayTeam: match.awayTeam,
+            });
+          }
+        }
       }
     }
 
@@ -215,7 +287,7 @@ class PolymarketSyncService {
 
     for (const match of pendingMatches) {
       try {
-        const events = await this.fetchEvents({ id: match.polymarketEventId });
+        const events = await this.fetchEventsById(match.polymarketEventId);
         const event = events[0];
         if (!event) continue;
 
@@ -226,19 +298,19 @@ class PolymarketSyncService {
           continue;
         }
 
-        const classified = classifyOutcomeMarkets(event.markets, match.homeTeam, match.awayTeam);
-        if (!classified) continue;
-
-        const home = getYesPriceAndToken(classified.home);
-        const draw = getYesPriceAndToken(classified.draw);
-        const away = getYesPriceAndToken(classified.away);
-        if (!home || !draw || !away) continue;
+        const extracted =
+          match.drawTokenId === null
+            ? extractTwoOutcomeMatch(event)
+            : extractThreeOutcomeMatch(event);
+        if (!extracted) continue;
 
         const outcomes: Array<{ key: 'home' | 'draw' | 'away'; price: number }> = [
-          { key: 'home', price: home.price },
-          { key: 'draw', price: draw.price },
-          { key: 'away', price: away.price },
+          { key: 'home', price: extracted.home.price },
+          { key: 'away', price: extracted.away.price },
         ];
+        if (extracted.draw) {
+          outcomes.push({ key: 'draw', price: extracted.draw.price });
+        }
         const winner = outcomes.reduce((a, b) => (b.price > a.price ? b : a));
 
         await match.update({
@@ -260,16 +332,28 @@ class PolymarketSyncService {
     }
   }
 
+  private async fetchEventsById(eventId: string): Promise<GammaEvent[]> {
+    const response = await fetch(`${GAMMA_API_URL}/events?id=${encodeURIComponent(eventId)}`);
+    if (!response.ok) {
+      throw new Error(`Gamma API request failed (${response.status})`);
+    }
+    const data = (await response.json()) as GammaEvent[] | { events?: GammaEvent[] };
+    return Array.isArray(data) ? data : (data.events ?? []);
+  }
+
   // The Gamma API silently caps each response at 100 events regardless of the
   // requested `limit`, so listing everything under a tag requires paging via `offset`.
-  private async fetchEvents(params: Record<string, string | boolean>): Promise<GammaEvent[]> {
+  private async fetchEvents(
+    params: Record<string, string | boolean>,
+    tagSlug: string
+  ): Promise<GammaEvent[]> {
     const pageSize = 100;
     const maxPages = 20;
     const allEvents: GammaEvent[] = [];
 
     for (let page = 0; page < maxPages; page++) {
       const query = new URLSearchParams({
-        tag_slug: WORLD_CUP_TAG_SLUG,
+        tag_slug: tagSlug,
         limit: String(pageSize),
         offset: String(page * pageSize),
       });

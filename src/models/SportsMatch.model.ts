@@ -5,6 +5,7 @@ export class SportsMatch extends Model<SportsMatchAttributes, SportsMatchCreatio
   declare id: string;
   declare polymarketEventId: string;
   declare slug: string;
+  declare sport: string;
   declare homeTeam: string;
   declare awayTeam: string;
   declare homeFlag: string;
@@ -12,10 +13,10 @@ export class SportsMatch extends Model<SportsMatchAttributes, SportsMatchCreatio
   declare startTime: Date;
   declare status: 'scheduled' | 'live' | 'finished' | 'cancelled';
   declare homeTokenId: string;
-  declare drawTokenId: string;
+  declare drawTokenId: string | null;
   declare awayTokenId: string;
   declare homeOdds: number;
-  declare drawOdds: number;
+  declare drawOdds: number | null;
   declare awayOdds: number;
   declare winningOutcome: 'home' | 'draw' | 'away' | null;
   declare resolvedAt: Date | null;
@@ -40,6 +41,11 @@ export const initSportsMatchModel = (sequelize: Sequelize): typeof SportsMatch =
       slug: {
         type: DataTypes.STRING(255),
         allowNull: false,
+      },
+      sport: {
+        type: DataTypes.STRING(20),
+        allowNull: false,
+        defaultValue: 'football',
       },
       homeTeam: {
         type: DataTypes.STRING(100),
@@ -74,7 +80,7 @@ export const initSportsMatchModel = (sequelize: Sequelize): typeof SportsMatch =
       },
       drawTokenId: {
         type: DataTypes.STRING(128),
-        allowNull: false,
+        allowNull: true,
       },
       awayTokenId: {
         type: DataTypes.STRING(128),
@@ -87,8 +93,8 @@ export const initSportsMatchModel = (sequelize: Sequelize): typeof SportsMatch =
       },
       drawOdds: {
         type: DataTypes.DECIMAL(10, 4),
-        allowNull: false,
-        defaultValue: 3,
+        allowNull: true,
+        defaultValue: null,
       },
       awayOdds: {
         type: DataTypes.DECIMAL(10, 4),
