@@ -154,6 +154,14 @@ function extractThreeOutcomeMatch(event: GammaEvent): ExtractedMatch | null {
  * (e.g. "Set 1 Winner", "Match O/U 21.5"), the overall match winner doesn't.
  */
 function extractTwoOutcomeMatch(event: GammaEvent): ExtractedMatch | null {
+  // Requires a real "Player/Team A vs Player/Team B" title, same as the soccer
+  // path - otherwise generic binary Yes/No prop markets on the same tag (e.g.
+  // "will Ronaldo join a new club?") get misread as a fixture between two teams
+  // literally named "Yes" and "No".
+  if (!/^(.+?)\s+(?:vs\.?|v\.?)\s+(.+)$/i.test(event.title) || event.title.includes(' - ')) {
+    return null;
+  }
+
   const moneyline = event.markets.find((m) => !(m.groupItemTitle || '').trim());
   if (!moneyline) return null;
 
@@ -165,6 +173,7 @@ function extractTwoOutcomeMatch(event: GammaEvent): ExtractedMatch | null {
   if (!outcomes[0] || !outcomes[1] || !prices[0] || !prices[1] || !tokenIds[0] || !tokenIds[1]) {
     return null;
   }
+  if (outcomes[0].toLowerCase() === 'yes' && outcomes[1].toLowerCase() === 'no') return null;
 
   return {
     homeTeam: outcomes[0],
