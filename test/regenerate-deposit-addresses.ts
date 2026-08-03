@@ -22,7 +22,7 @@ import { logger } from '../src/utils/logger';
 import { create_account } from '../src/utils/nanswap_wallet';
 
 const EXECUTE = process.argv.includes('--execute');
-const DELAY_MS = 500;
+const CONCURRENCY = Number(process.env.ROTATION_CONCURRENCY) || 50;
 
 interface RotationResult {
   userId: string;
@@ -31,8 +31,27 @@ interface RotationResult {
   error?: string;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+async function rotateUser(user: User, index: number, total: number): Promise<RotationResult> {
+  const oldAddress = user.depositAddress;
+
+  try {
+    if (EXECUTE) {
+      await sweepDepositAddress(oldAddress);
+    }
+
+    const newAddress = await create_account();
+
+    if (EXECUTE) {
+      await user.update({ depositAddress: newAddress });
+    }
+
+    logger.info(`[${index + 1}/${total}] rotated`, { userId: user.id, oldAddress, newAddress });
+    return { userId: user.id, oldAddress, newAddress };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    logger.error(`[${index + 1}/${total}] FAILED`, { userId: user.id, oldAddress, error: message });
+    return { userId: user.id, oldAddress, newAddress: null, error: message };
+  }
 }
 
 async function main(): Promise<void> {
@@ -40,33 +59,16 @@ async function main(): Promise<void> {
   logger.info(`Connected to database (${EXECUTE ? 'EXECUTE' : 'DRY RUN'} mode)`);
 
   const users = await User.findAll({ attributes: ['id', 'depositAddress'] });
-  logger.info(`Found ${users.length} users to rotate`);
+  logger.info(`Found ${users.length} users to rotate (concurrency: ${CONCURRENCY})`);
 
   const results: RotationResult[] = [];
 
-  for (const [index, user] of users.entries()) {
-    const oldAddress = user.depositAddress;
-
-    try {
-      if (EXECUTE) {
-        await sweepDepositAddress(oldAddress);
-      }
-
-      const newAddress = await create_account();
-
-      if (EXECUTE) {
-        await user.update({ depositAddress: newAddress });
-      }
-
-      results.push({ userId: user.id, oldAddress, newAddress });
-      logger.info(`[${index + 1}/${users.length}] rotated`, { userId: user.id, oldAddress, newAddress });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      results.push({ userId: user.id, oldAddress, newAddress: null, error: message });
-      logger.error(`[${index + 1}/${users.length}] FAILED`, { userId: user.id, oldAddress, error: message });
-    }
-
-    await sleep(DELAY_MS);
+  for (let i = 0; i < users.length; i += CONCURRENCY) {
+    const batch = users.slice(i, i + CONCURRENCY);
+    const batchResults = await Promise.all(
+      batch.map((user, j) => rotateUser(user, i + j, users.length))
+    );
+    results.push(...batchResults);
   }
 
   const failed = results.filter((r) => r.error);
