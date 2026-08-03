@@ -14,7 +14,11 @@
     "lint:fix-unsafe": "biome check --write --unsafe .",
     "format": "biome format --write .",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:migrate": "sequelize-cli db:migrate",
+    "db:migrate:undo": "sequelize-cli db:migrate:undo",
+    "db:migrate:status": "sequelize-cli db:migrate:status",
+    "db:migration:generate": "sequelize-cli migration:generate --name"
   },
   "dependencies": {
     "@types/cors": "^2.8.19",
@@ -46,6 +50,7 @@
     "@types/node": "^24.7.2",
     "@types/uuid": "^11.0.0",
     "@types/validator": "^13.15.3",
+    "sequelize-cli": "^6.6.5",
     "typescript": "^5.9.3"
   }
 }
