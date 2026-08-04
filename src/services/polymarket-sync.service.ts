@@ -42,6 +42,12 @@ const MIN_LIQUIDITY_USD = parseFloat(process.env.SPORTS_MIN_LIQUIDITY_USD || '50
 // hasn't resolved on Polymarket (illiquid market, stalled resolution, ...) is
 // cancelled and its pending bets refunded, rather than left bettable forever.
 const STALE_UNRESOLVED_DAYS = parseFloat(process.env.SPORTS_STALE_UNRESOLVED_DAYS || '3');
+// Each pending match costs one sequential Gamma API request to check. A large
+// backlog (e.g. after months of unresolved matches piling up) can take far
+// longer to scan than RESOLUTION_CHECK_INTERVAL_MS, causing runs to overlap
+// and Gamma requests to queue up and time out. Capping the batch size lets the
+// backlog drain gradually instead of compounding into a full outage.
+const MAX_RESOLUTIONS_PER_CYCLE = 30;
 
 interface GammaMarket {
   id: string;
@@ -208,6 +214,8 @@ function getTeamFlags(event: GammaEvent): { homeFlag: string; awayFlag: string }
 class PolymarketSyncService {
   private matchListTimer: NodeJS.Timeout | null = null;
   private resolutionTimer: NodeJS.Timeout | null = null;
+  private isSyncingMatches = false;
+  private isCheckingResolutions = false;
 
   public start(): void {
     logger.info('[PolymarketSync] Starting sync service');
@@ -217,15 +225,35 @@ class PolymarketSyncService {
     });
 
     this.matchListTimer = setInterval(() => {
-      this.fetchAndUpsertMatches().catch((error) => {
-        logger.error('[PolymarketSync] Match sync failed', { error });
-      });
+      if (this.isSyncingMatches) {
+        logger.warn('[PolymarketSync] Skipping match sync tick, previous run still in progress');
+        return;
+      }
+      this.isSyncingMatches = true;
+      this.fetchAndUpsertMatches()
+        .catch((error) => {
+          logger.error('[PolymarketSync] Match sync failed', { error });
+        })
+        .finally(() => {
+          this.isSyncingMatches = false;
+        });
     }, MATCH_LIST_INTERVAL_MS);
 
     this.resolutionTimer = setInterval(() => {
-      this.checkResolutions().catch((error) => {
-        logger.error('[PolymarketSync] Resolution check failed', { error });
-      });
+      if (this.isCheckingResolutions) {
+        logger.warn(
+          '[PolymarketSync] Skipping resolution check tick, previous run still in progress'
+        );
+        return;
+      }
+      this.isCheckingResolutions = true;
+      this.checkResolutions()
+        .catch((error) => {
+          logger.error('[PolymarketSync] Resolution check failed', { error });
+        })
+        .finally(() => {
+          this.isCheckingResolutions = false;
+        });
     }, RESOLUTION_CHECK_INTERVAL_MS);
   }
 
@@ -325,6 +353,10 @@ class PolymarketSyncService {
         status: { [Op.in]: ['scheduled', 'live'] },
         startTime: { [Op.lt]: new Date() },
       },
+      // Oldest kickoffs first: those are the ones most likely to be stale and
+      // eligible for cancellation, so prioritize draining them off the backlog.
+      order: [['startTime', 'ASC']],
+      limit: MAX_RESOLUTIONS_PER_CYCLE,
     });
 
     for (const match of pendingMatches) {

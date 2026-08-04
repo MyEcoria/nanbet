@@ -28,6 +28,11 @@ class SportsService {
       where: {
         [Op.or]: [
           { liquidity: { [Op.gte]: MIN_LIQUIDITY_USD } },
+          // liquidity 0 means "not synced from Polymarket yet" (e.g. right after
+          // the column was added, or while the sync backlog is still catching
+          // up) - keep those visible rather than hiding the whole list until
+          // every match has a real liquidity value.
+          { liquidity: 0 },
           { status: { [Op.in]: ['finished', 'cancelled'] } },
         ],
       },
@@ -92,7 +97,8 @@ class SportsService {
           throw new Error('BETTING_CLOSED');
         }
 
-        if (parseFloat(String(match.liquidity)) < MIN_LIQUIDITY_USD) {
+        const matchLiquidity = parseFloat(String(match.liquidity));
+        if (matchLiquidity !== 0 && matchLiquidity < MIN_LIQUIDITY_USD) {
           throw new Error('BETTING_CLOSED');
         }
 
