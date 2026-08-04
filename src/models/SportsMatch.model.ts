@@ -18,6 +18,7 @@ export class SportsMatch extends Model<SportsMatchAttributes, SportsMatchCreatio
   declare homeOdds: number;
   declare drawOdds: number | null;
   declare awayOdds: number;
+  declare liquidity: number;
   declare winningOutcome: 'home' | 'draw' | 'away' | null;
   declare resolvedAt: Date | null;
   declare lastSyncedAt: Date;
@@ -100,6 +101,11 @@ export const initSportsMatchModel = (sequelize: Sequelize): typeof SportsMatch =
         type: DataTypes.DECIMAL(10, 4),
         allowNull: false,
         defaultValue: 2,
+      },
+      liquidity: {
+        type: DataTypes.DECIMAL(14, 2),
+        allowNull: false,
+        defaultValue: 0,
       },
       winningOutcome: {
         type: DataTypes.ENUM('home', 'draw', 'away'),

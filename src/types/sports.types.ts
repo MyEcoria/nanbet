@@ -21,6 +21,7 @@ export interface SportsMatchAttributes {
   homeOdds: number;
   drawOdds: number | null;
   awayOdds: number;
+  liquidity: number;
   winningOutcome: SportsOutcome | null;
   resolvedAt: Date | null;
   lastSyncedAt: Date;
@@ -36,6 +37,7 @@ export interface SportsMatchCreationAttributes
     | 'homeOdds'
     | 'drawOdds'
     | 'awayOdds'
+    | 'liquidity'
     | 'winningOutcome'
     | 'resolvedAt'
     | 'lastSyncedAt'
@@ -94,7 +96,7 @@ export interface SportsBetSettledData {
   betId: string;
   matchId: string;
   outcome: SportsOutcome;
-  status: 'won' | 'lost';
+  status: 'won' | 'lost' | 'void';
   amount: number;
   currency: string;
   payout: number;

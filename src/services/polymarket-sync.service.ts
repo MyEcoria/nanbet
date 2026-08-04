@@ -35,6 +35,13 @@ const RESOLUTION_CHECK_INTERVAL_MS = 30_000;
 // A hung request (no response, no error) would otherwise stall the whole sync
 // loop forever - fetch() has no default timeout.
 const FETCH_TIMEOUT_MS = 15_000;
+// Matches below this Polymarket liquidity (USD) never get tracked as new
+// bettable matches - keep in sync with sportsService's own display/bet gate.
+const MIN_LIQUIDITY_USD = parseFloat(process.env.SPORTS_MIN_LIQUIDITY_USD || '500');
+// A scheduled/live match whose kickoff is this many days in the past and still
+// hasn't resolved on Polymarket (illiquid market, stalled resolution, ...) is
+// cancelled and its pending bets refunded, rather than left bettable forever.
+const STALE_UNRESOLVED_DAYS = parseFloat(process.env.SPORTS_STALE_UNRESOLVED_DAYS || '3');
 
 interface GammaMarket {
   id: string;
@@ -64,6 +71,7 @@ interface GammaEvent {
   startTime: string;
   closed: boolean;
   active: boolean;
+  liquidity?: number;
   markets: GammaMarket[];
   teams?: GammaTeam[];
 }
@@ -247,6 +255,14 @@ class PolymarketSyncService {
             if (!match) continue;
 
             const existing = await SportsMatch.findOne({ where: { polymarketEventId: event.id } });
+            const liquidity = event.liquidity ?? 0;
+
+            // Don't start tracking new markets that are already too illiquid to
+            // offer real odds on; matches already tracked keep syncing (their
+            // liquidity is still refreshed below) so they can drop out of the
+            // bettable list via sportsService's own liquidity gate.
+            if (!existing && liquidity < MIN_LIQUIDITY_USD) continue;
+
             const { homeFlag, awayFlag } = getTeamFlags(event);
             const kickoff = new Date(event.startTime);
 
@@ -264,6 +280,7 @@ class PolymarketSyncService {
               homeOdds: probabilityToOdds(match.home.price),
               drawOdds: match.draw ? probabilityToOdds(match.draw.price) : null,
               awayOdds: probabilityToOdds(match.away.price),
+              liquidity,
               lastSyncedAt: new Date(),
             };
 
@@ -312,13 +329,28 @@ class PolymarketSyncService {
 
     for (const match of pendingMatches) {
       try {
+        const daysSinceStart = (Date.now() - match.startTime.getTime()) / 86_400_000;
+
         const events = await this.fetchEventsById(match.polymarketEventId);
         const event = events[0];
-        if (!event) continue;
+
+        if (!event) {
+          if (daysSinceStart > STALE_UNRESOLVED_DAYS) {
+            await this.cancelStaleMatch(match, 'event_not_found');
+          }
+          continue;
+        }
+
+        if (event.liquidity !== undefined && event.liquidity !== parseFloat(String(match.liquidity))) {
+          await match.update({ liquidity: event.liquidity });
+        }
 
         if (!event.closed) {
           if (match.status === 'scheduled') {
             await match.update({ status: 'live' });
+          }
+          if (daysSinceStart > STALE_UNRESOLVED_DAYS) {
+            await this.cancelStaleMatch(match, 'unresolved_past_deadline');
           }
           continue;
         }
@@ -355,6 +387,20 @@ class PolymarketSyncService {
         logger.error('[PolymarketSync] Error resolving match', { error, matchId: match.id });
       }
     }
+  }
+
+  private async cancelStaleMatch(match: SportsMatch, reason: string): Promise<void> {
+    await match.update({ status: 'cancelled', resolvedAt: new Date() });
+    await sportsService.voidMatch(match.id);
+    await polymarketOddsService.syncSubscriptions();
+
+    logger.warn('[PolymarketSync] Cancelled stale unresolved match, bets refunded', {
+      matchId: match.id,
+      reason,
+      homeTeam: match.homeTeam,
+      awayTeam: match.awayTeam,
+      startTime: match.startTime,
+    });
   }
 
   private async fetchEventsById(eventId: string): Promise<GammaEvent[]> {

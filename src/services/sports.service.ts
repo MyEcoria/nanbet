@@ -1,3 +1,4 @@
+import { Op } from 'sequelize';
 import type { Server as SocketIOServer } from 'socket.io';
 import { sequelize } from '../config/database';
 import wallets from '../config/wallets';
@@ -8,6 +9,11 @@ import type { SportsMatchSummary, SportsOutcome } from '../types/sports.types';
 import { logger } from '../utils/logger';
 
 const MIN_BETTABLE_ODDS = 1.1;
+// Below this Polymarket liquidity (USD), the order book is too thin for the
+// displayed odds to reflect a real market - these markets get hidden from the
+// betting list instead of being offered. Already-resolved/cancelled matches
+// are exempt since they're not open for new bets anyway.
+const MIN_LIQUIDITY_USD = parseFloat(process.env.SPORTS_MIN_LIQUIDITY_USD || '500');
 
 class SportsService {
   private io: SocketIOServer | null = null;
@@ -19,7 +25,12 @@ class SportsService {
 
   public async listMatches(): Promise<SportsMatchSummary[]> {
     const matches = await SportsMatch.findAll({
-      where: {},
+      where: {
+        [Op.or]: [
+          { liquidity: { [Op.gte]: MIN_LIQUIDITY_USD } },
+          { status: { [Op.in]: ['finished', 'cancelled'] } },
+        ],
+      },
       order: [['startTime', 'ASC']],
     });
 
@@ -78,6 +89,10 @@ class SportsService {
         }
 
         if (match.status !== 'scheduled' && match.status !== 'live') {
+          throw new Error('BETTING_CLOSED');
+        }
+
+        if (parseFloat(String(match.liquidity)) < MIN_LIQUIDITY_USD) {
           throw new Error('BETTING_CLOSED');
         }
 
@@ -240,6 +255,73 @@ class SportsService {
       });
     } catch (error) {
       logger.error('[Sports] Error settling match', { error, matchId, winningOutcome });
+    }
+  }
+
+  /**
+   * Cancels a match that will never resolve (illiquid/stale on Polymarket) and
+   * refunds every pending bet's stake in full, rather than leaving it open to
+   * bet on indefinitely or leaving stakes locked with no result.
+   */
+  public async voidMatch(matchId: string): Promise<void> {
+    try {
+      const voided = await sequelize.transaction(async (t) => {
+        const bets = await SportsBet.findAll({
+          where: { matchId, status: 'pending' },
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        const results: { userId: string; bet: SportsBet }[] = [];
+
+        for (const bet of bets) {
+          const user = await User.findByPk(bet.userId, { transaction: t, lock: t.LOCK.UPDATE });
+          if (!user) continue;
+
+          const balanceField = `balance${bet.currency}` as keyof User;
+          const currentBalance = parseFloat(String(user[balanceField] ?? 0));
+          const refund = parseFloat(String(bet.amount));
+          await user.update({ [balanceField]: currentBalance + refund }, { transaction: t });
+
+          await bet.update({ status: 'void', settledAt: new Date() }, { transaction: t });
+
+          results.push({ userId: bet.userId, bet });
+        }
+
+        return results;
+      });
+
+      for (const { userId, bet } of voided) {
+        const user = await User.findByPk(userId);
+        if (user && this.io) {
+          this.io.to(`user:${userId}`).emit('balance:update', {
+            balanceXNO: parseFloat(String(user.balanceXNO)),
+            balanceBAN: parseFloat(String(user.balanceBAN)),
+            balanceXRO: parseFloat(String(user.balanceXRO)),
+            balanceANA: parseFloat(String(user.balanceANA)),
+            balanceXDG: parseFloat(String(user.balanceXDG)),
+            balanceNANUSD: parseFloat(String(user.balanceNANUSD)),
+            balanceNANBTC: parseFloat(String(user.balanceNANBTC)),
+          });
+
+          this.io.to(`user:${userId}`).emit('sports:bet:settled', {
+            betId: bet.id,
+            matchId,
+            outcome: bet.outcome,
+            status: 'void',
+            amount: parseFloat(String(bet.amount)),
+            currency: bet.currency,
+            payout: parseFloat(String(bet.amount)),
+          });
+        }
+      }
+
+      logger.info('[Sports] Match voided, bets refunded', {
+        matchId,
+        betsVoided: voided.length,
+      });
+    } catch (error) {
+      logger.error('[Sports] Error voiding match', { error, matchId });
     }
   }
 
